@@ -37,12 +37,12 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
 
   // ─── Fallback: setAcademy direto se precisar ───────────────
   const setAcademyId = (id: string) => {
-    setAcademy({
+    setAcademy(prev => ({
       id,
-      name: "Academia Padrão",
-      primaryColorHex: "#3B82F6",
-      documentNumber: ""
-    });
+      name: prev?.name || "Busca em andamento...",
+      primaryColorHex: prev?.primaryColorHex || "#3B82F6",
+      documentNumber: prev?.documentNumber || ""
+    }));
   };
 
   // ─── Atualiza localmente (estado React + localStorage) ───────────────
@@ -126,7 +126,15 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
       }
 
       if (!academyId) {
-        // Sem vínculo no banco, parte para o fallback
+        // Tenta buscar no localStorage como último recurso de ID
+        const cached = localStorage.getItem('academy-data');
+        if (cached) {
+          const cachedAcademy = JSON.parse(cached);
+          if (cachedAcademy.id) academyId = cachedAcademy.id;
+        }
+      }
+
+      if (!academyId) {
         loadFromLocalStorageOrDefault();
         return;
       }
@@ -153,13 +161,15 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
         logoUrl: academyData.logo_url || undefined, // URL pública do Supabase Storage
       };
 
-      // Passo 4: Mescla com o cache local (pode ter a logo)
+      // Passo 4: Mescla com o cache local apenas se o banco estiver incompleto
       try {
         const cached = localStorage.getItem('academy-data');
         if (cached) {
           const cachedAcademy: Academy = JSON.parse(cached);
-          // Dados do banco têm prioridade, mas logo vem do cache
-          dbAcademy.logoUrl = cachedAcademy.logoUrl;
+          // Se o banco não retornou logo, mas temos uma no cache que pertence a ESTA academia, mantém ela
+          if (!dbAcademy.logoUrl && cachedAcademy.id === dbAcademy.id) {
+            dbAcademy.logoUrl = cachedAcademy.logoUrl;
+          }
         }
       } catch(e) {}
 
@@ -190,13 +200,22 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
 
   // ─── Tema ──────────────────────────────────────────────────────────────
   const applyTheme = (theme: ThemeDefinition) => {
+    if (!theme || !theme.vars) return;
+
     setActiveTheme(theme);
     const root = document.documentElement;
-    root.classList.toggle('dark', theme.isDark);
-    Object.entries(theme.vars).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
+    
+    // Proteção contra threads de renderização do Next.js
+    requestAnimationFrame(() => {
+      root.classList.toggle('dark', theme.isDark);
+      Object.entries(theme.vars).forEach(([key, value]) => {
+        if (value) root.style.setProperty(key, value);
+      });
+      if (theme.vars["--primary"]) {
+        root.style.setProperty("--color-primary", theme.vars["--primary"]);
+      }
     });
-    root.style.setProperty("--color-primary", theme.vars["--primary"]);
+
     try {
       localStorage.setItem('academy-theme-id', theme.id);
     } catch(e) {}

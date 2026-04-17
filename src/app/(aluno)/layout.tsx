@@ -31,7 +31,7 @@ export default function AlunoLayout({
               </div>
             )}
             <span className="font-semibold text-lg text-foreground line-clamp-1">
-              {academy?.name || "Faixa Preta"}
+              {academy?.name || "Carregando..."}
             </span>
            </div>
 
