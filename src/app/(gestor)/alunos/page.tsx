@@ -64,6 +64,7 @@ export default function AlunosPage() {
     avatarUrl: "",
     status: "ATIVO",
     turmaId: "",
+    modality: "Judô",
   };
 
   const [formData, setFormData] = useState<Partial<Student>>(initialFormState);
@@ -377,6 +378,22 @@ export default function AlunosPage() {
                     <option value="EVADIDO">🔴 Evadido (Desistente)</option>
                   </select>
                 </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="modality">Modalidade (Esporte)</Label>
+                  <select 
+                    id="modality" 
+                    value={formData.modality || "Judô"} 
+                    onChange={handleChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="Judô">Judô</option>
+                    <option value="Jiu-Jitsu">Jiu-Jitsu</option>
+                    <option value="Karate">Karate</option>
+                    <option value="Muay Thai">Muay Thai</option>
+                    <option value="Capoeira">Capoeira</option>
+                  </select>
+                </div>
               </div>
 
                {/* Seção Nova: Vinculação Financeira */}
@@ -590,6 +607,8 @@ export default function AlunosPage() {
                     <span className="text-xl tracking-tight">{selectedStudent.name}</span>
                     <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mt-1">
                       <span>{selectedStudent.email || "Sem e-mail"}</span>
+                      <span>•</span>
+                      <span className="text-primary font-bold">{selectedStudent.modality}</span>
                       <span>•</span>
                       <Badge variant="outline" className={`w-[110px] justify-between uppercase text-[10px] tracking-wider font-semibold border ${BELT_COLORS[selectedStudent.beltRank.toUpperCase()] || 'bg-muted text-muted-foreground'} flex items-center`}>
                         <span>{selectedStudent.beltRank}</span>

@@ -66,7 +66,7 @@ export function useApi(academyId?: string) {
         checkinBlocked: s.checkin_blocked || false,
         checkinBlockReason: s.checkin_block_reason,
         role: "ALUNO" as any,
-        modality: "Judô",
+        modality: s.modality || "Judô",
         lastGraduationDate: s.created_at,
         isReadyForExam: s.is_ready_for_exam || false,
         beltDegree: s.belt_degree || 0,
@@ -194,6 +194,7 @@ export function useApi(academyId?: string) {
       belt_degree: studentData.beltDegree || 0,
       turma_id: studentData.turmaId || null,
       plan_id: studentData.planId || null,
+      modality: studentData.modality || 'Judô',
     };
 
     // Usamos .select() para que o Supabase retorne erro se RLS bloquear
@@ -233,6 +234,7 @@ export function useApi(academyId?: string) {
     if ((updates as any).classesTargetForNextRank !== undefined) payload.classes_required_for_next_belt = (updates as any).classesTargetForNextRank;
     if (updates.turmaId !== undefined) payload.turma_id = updates.turmaId ? updates.turmaId : null;
     if (updates.planId !== undefined) payload.plan_id = updates.planId ? updates.planId : null;
+    if (updates.modality !== undefined) payload.modality = updates.modality;
 
     const { error } = await supabase.from('students').update(payload).eq('id', studentId);
     if (error) {
