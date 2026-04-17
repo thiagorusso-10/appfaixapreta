@@ -56,7 +56,7 @@ export default function AlunoLayout({
                 </DropdownMenuContent>
              </DropdownMenu>
 
-             <UserButton afterSignOutUrl="/sign-in" />
+             <UserButton />
            </div>
         </header>
 
