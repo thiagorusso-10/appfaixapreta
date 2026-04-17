@@ -402,10 +402,10 @@ export default function AlunosPage() {
 
                {/* Seção 2: Contatos */}
                <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2">
-                    <Label htmlFor="email">E-mail (Opcional p/ Menores)</Label>
-                    <Input id="email" type="email" placeholder="mail@exemplo.com" value={formData.email || ""} onChange={handleChange} />
-                 </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mails de Acesso (Para o App, separados por vírgula)</Label>
+                    <Input id="email" type="text" placeholder="mae@gmail.com, pai@hotmail.com" value={formData.email || ""} onChange={handleChange} />
+                  </div>
                  <div className="grid gap-2">
                     <Label htmlFor="phone">Telefone / WhatsApp</Label>
                     <Input id="phone" type="tel" placeholder="(11) 99999-9999" value={formData.phone || ""} onChange={handleChange} />
