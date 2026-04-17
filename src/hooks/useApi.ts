@@ -66,7 +66,7 @@ export function useApi(academyId?: string) {
         checkinBlocked: s.checkin_blocked || false,
         checkinBlockReason: s.checkin_block_reason,
         role: "ALUNO" as any,
-        modality: "Jiu-Jitsu",
+        modality: "Judô",
         lastGraduationDate: s.created_at,
         isReadyForExam: s.is_ready_for_exam || false,
         beltDegree: s.belt_degree || 0,

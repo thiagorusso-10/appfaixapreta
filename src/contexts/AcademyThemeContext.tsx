@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Academy } from "@/lib/types";
 import { ThemeDefinition, PRESET_THEMES } from "@/lib/themes";
 import { useSupabase } from "@/lib/supabase/client";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 
 interface AcademyThemeContextType {
   academy: Academy | null;
@@ -33,6 +33,7 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
 
   const supabase = useSupabase();
   const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
 
   // ─── Fallback: setAcademy direto se precisar ───────────────
   const setAcademyId = (id: string) => {
@@ -97,20 +98,38 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
     if (!isLoaded || !isSignedIn) return;
 
     try {
-      // Passo 1: Descobre qual academia pertence ao usuário logado
+      let academyId: string | undefined;
+
+      // Passo 1: Descobre qual academia pertence ao usuário logado (Gestores)
       const { data: userData } = await supabase
         .from('users')
         .select('academy_id')
         .limit(1)
         .single();
 
-      if (!userData?.academy_id) {
+      if (userData?.academy_id) {
+        academyId = userData.academy_id;
+      } else if (user?.emailAddresses?.[0]?.emailAddress) {
+        // Se não achou em users, tenta achar na tabela students (Alunos)
+        const email = user.emailAddresses[0].emailAddress;
+        // Pega a academia do primeiro aluno que tiver esse email cadastrado
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('academy_id')
+          .ilike('email', `%${email}%`)
+          .limit(1)
+          .single();
+          
+        if (studentData?.academy_id) {
+           academyId = studentData.academy_id;
+        }
+      }
+
+      if (!academyId) {
         // Sem vínculo no banco, parte para o fallback
         loadFromLocalStorageOrDefault();
         return;
       }
-
-      const academyId = userData.academy_id;
 
       // Passo 2: Busca os dados da academia
       const { data: academyData, error } = await supabase
@@ -154,7 +173,7 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
       console.warn('fetchAcademyFromDb: erro, usando fallback:', err);
       loadFromLocalStorageOrDefault();
     }
-  }, [supabase, isLoaded, isSignedIn]);
+  }, [supabase, isLoaded, isSignedIn, user]);
 
   // ─── Fallback: localStorage → default ───────────────────────────────────
   const loadFromLocalStorageOrDefault = () => {
