@@ -84,6 +84,8 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
         return false;
       }
 
+      // Após salvar, atualiza o cache local imediatamente
+      localStorage.setItem('academy-data', JSON.stringify(academy));
       return true;
     } catch (err) {
       console.error('saveAcademyToDb: exceção:', err);
@@ -112,14 +114,19 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
       } else if (user?.emailAddresses?.[0]?.emailAddress) {
         // Se não achou em users, tenta achar na tabela students (Alunos)
         const email = user.emailAddresses[0].emailAddress;
-        // Pega a academia do primeiro aluno que tiver esse email cadastrado
-        const { data: studentData } = await supabase
+        
+        // Agora que a RLS foi corrigida, o Aluno consegue ler o próprio registro
+        const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('academy_id')
           .ilike('email', `%${email}%`)
           .limit(1)
-          .single();
+          .maybeSingle();
           
+        if (studentError) {
+          console.warn('AcademyThemeContext: Erro ao buscar aluno:', studentError);
+        }
+
         if (studentData?.academy_id) {
            academyId = studentData.academy_id;
         }
