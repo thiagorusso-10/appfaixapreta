@@ -36,7 +36,7 @@ export default function AlunoLayout({
            </div>
 
            <div className="ml-auto flex items-center gap-3">
-             <DropdownMenu>
+              <DropdownMenu>
                 <DropdownMenuTrigger className="p-2 rounded-full hover:bg-muted transition-colors outline-none">
                   <Palette className="w-5 h-5 text-muted-foreground" />
                 </DropdownMenuTrigger>
@@ -46,13 +46,16 @@ export default function AlunoLayout({
                   {PRESET_THEMES.map(theme => (
                     <DropdownMenuItem 
                       key={theme.id} 
-                      onClick={(e) => {
+                      onSelect={(e) => {
                         e.preventDefault();
-                        try {
-                          applyTheme(theme);
-                        } catch (err) {
-                          console.error('Erro ao aplicar tema:', err);
-                        }
+                        // setTimeout evita o crash do Radix UI ao desmontar enquanto o React faz re-render global
+                        setTimeout(() => {
+                          try {
+                            applyTheme(theme);
+                          } catch (err) {
+                            console.error('Erro ao aplicar tema:', err);
+                          }
+                        }, 10);
                       }}
                       className="flex items-center gap-3 cursor-pointer"
                     >

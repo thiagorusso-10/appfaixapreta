@@ -340,7 +340,7 @@ export function useApi(academyId?: string) {
     }
 
     const existingStudentIds = new Set((existing || []).map((p: any) => p.student_id));
-    const activeStudents = freshStudents.filter((s: any) => s.status === 'ATIVO' && !s.is_exempt);
+    const activeStudents = freshStudents.filter((s: any) => s.status?.toUpperCase() === 'ATIVO' && !s.is_exempt);
 
     console.log(`generateMonthlyInvoices: ${activeStudents.length} alunos ativos não-isentos encontrados. ${existingStudentIds.size} já possuem fatura no período.`);
 
@@ -359,15 +359,17 @@ export function useApi(academyId?: string) {
         };
       });
 
-    if (toInsert.length > 0) {
-      const { error: insertError } = await supabase.from('payments').insert(toInsert);
-      if (insertError) {
-        console.error('generateMonthlyInvoices: erro ao inserir faturas:', insertError);
-        throw new Error(`Erro ao salvar faturas no banco: ${insertError.message}`);
-      }
-      await fetchData();
+    if (toInsert.length === 0) {
+       throw new Error(`DIAGNÓSTICO:\nAlunos na academia: ${freshStudents.length}\nAlunos "Ativos" encontrados: ${activeStudents.length}\nFaturas que JÁ existem no período: ${existingStudentIds.size}\n\nConclusão: Nenhuma fatura nova precisava ser gerada.`);
     }
 
+    const { error: insertError } = await supabase.from('payments').insert(toInsert);
+    if (insertError) {
+      console.error('generateMonthlyInvoices: erro ao inserir faturas:', insertError);
+      throw new Error(`Erro ao salvar faturas no banco (RLS?): ${insertError.message}`);
+    }
+    
+    await fetchData();
     return toInsert.length;
   };
 
