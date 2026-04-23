@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useSupabase } from "@/lib/supabase/client";
-import { Flame, ShieldAlert } from "lucide-react";
+import { Flame, ShieldAlert, Copy, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AuthSyncPage() {
@@ -12,6 +12,8 @@ export default function AuthSyncPage() {
   const { getToken } = useAuth();
   const router = useRouter();
   const supabase = useSupabase();
+  const [debugInfo, setDebugInfo] = useState<{email: string; clerkId: string; reason: string} | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!userLoaded) return;
@@ -24,49 +26,58 @@ export default function AuthSyncPage() {
       try {
         const email = user.emailAddresses[0]?.emailAddress;
         if (!email) throw new Error("Usuário sem e-mail");
+        const clerkId = user.id;
 
         // 1. Procurar se é um GESTOR/PROFESSOR (Tabela users)
-        // OBS: Por proteção (RLS restrito), usamos auth do Clerk e se houver permissão, vai retornar
-        const { data: adminData } = await supabase
+        const { data: adminData, error: adminError } = await supabase
           .from("users")
           .select("role, academy_id")
           .eq("email", email)
-          .single();
+          .maybeSingle();
+
+        if (adminError) {
+          console.warn("auth-sync: Erro ao consultar tabela users:", adminError);
+        }
 
         if (adminData && (adminData.role === 'GESTOR' || adminData.role === 'PROFESSOR')) {
-           // É da equipe da academia.
            router.push("/dashboard");
            return;
         }
 
         // 2. Procurar se é PAI/MÃE/ALUNO (Tabela students)
-        // Usa `ilike` ou `like` para buscar email parcial para múltiplos responsáveis (ex: mae@gmail.com,pai@gmail.com)
-        const { data: studentData } = await supabase
+        const { data: studentData, error: studentError } = await supabase
           .from("students")
           .select("id")
           .ilike("email", `%${email}%`);
 
+        if (studentError) {
+          console.warn("auth-sync: Erro ao consultar tabela students:", studentError);
+        }
+
         if (studentData && studentData.length > 0) {
-           // Achou que ele é responsável por pelo menos 1 aluno!
            router.push("/aluno");
            return;
         }
 
-        // 3. Fallback de Segurança Máxima (Exclusividade de Tenant)
-        // Se a pessoa estiver rodando o código na própria máquina local (localhost),
-        // damos um bypass emergencial para ele conseguir entrar no Dashboard e cadastrar as coisas,
-        // já que a tabela users ainda está vazia e ele não me passou os e-mails oficiais.
+        // 3. Fallback localhost (desenvolvimento)
         if (typeof window !== "undefined" && window.location.hostname === "localhost") {
            console.warn("DEV BYPASS: Permitindo acesso de gestor por estar em localhost.");
            router.push("/dashboard");
            return;
         }
 
-        // 4. Email desconhecido (Novo cadastro que não tem permissões ainda)
-        // Fica retido na página de erro de acesso sem permissão!
+        // 4. Email desconhecido — salva info de debug para exibir na tela
+        const reason = adminError 
+          ? `Query users falhou: ${adminError.message}` 
+          : studentError 
+            ? `Query students falhou: ${studentError.message}` 
+            : 'E-mail não encontrado em nenhuma tabela (users ou students)';
+        setDebugInfo({ email, clerkId, reason });
         
       } catch (err) {
         console.error("Erro na sincronização de acesso:", err);
+        const email = user?.emailAddresses[0]?.emailAddress || 'desconhecido';
+        setDebugInfo({ email, clerkId: user?.id || '', reason: `Exceção: ${err}` });
       }
     };
 
@@ -82,6 +93,14 @@ export default function AuthSyncPage() {
      </div>
   );
 
+  const copyClerkId = () => {
+    if (debugInfo?.clerkId) {
+      navigator.clipboard.writeText(debugInfo.clerkId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
        <div className="max-w-md w-full bg-card rounded-3xl p-8 shadow-xl text-center flex flex-col items-center animate-in zoom-in-95 duration-300">
@@ -89,11 +108,34 @@ export default function AuthSyncPage() {
              <ShieldAlert className="w-8 h-8 text-red-500" />
           </div>
           <h1 className="text-2xl font-black text-foreground mb-2 tracking-tight">Acesso Retido</h1>
-          <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-8">
-             O seu e-mail (<span className="font-bold text-foreground">{user.emailAddresses[0]?.emailAddress}</span>) ainda não foi autorizado em nossa base.
+          <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-6">
+             O seu e-mail (<span className="font-bold text-foreground">{user?.emailAddresses[0]?.emailAddress}</span>) ainda não foi autorizado em nossa base.
              <br/><br/>
              Se você é responsável por um atleta, <b>solicite à direção que cadastre exatamente este seu e-mail na ficha do aluno(a)</b>. O aplicativo será liberado instantaneamente.
           </p>
+
+          {/* Debug Info - Visível para diagnóstico */}
+          {debugInfo && (
+            <div className="w-full mb-6 p-4 bg-muted/50 rounded-xl text-left space-y-2">
+              <p className="text-xs text-muted-foreground font-mono">
+                <span className="font-bold text-foreground">Clerk ID:</span>{" "}
+                <span className="select-all">{debugInfo.clerkId}</span>
+              </p>
+              <p className="text-xs text-muted-foreground font-mono">
+                <span className="font-bold text-foreground">Motivo:</span> {debugInfo.reason}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs mt-2"
+                onClick={copyClerkId}
+              >
+                {copied ? <CheckCircle className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                {copied ? 'Copiado!' : 'Copiar Clerk ID (para suporte)'}
+              </Button>
+            </div>
+          )}
+
           <div className="w-full flex gap-3">
              <Button variant="outline" className="w-full" onClick={() => router.push("/sign-in")}>
                Voltar ao Login
