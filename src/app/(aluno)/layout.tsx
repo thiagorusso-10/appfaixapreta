@@ -5,7 +5,7 @@ import { Building2, Home, DollarSign, Palette } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
-import { PRESET_THEMES } from "@/lib/themes";
+import { PRESET_THEMES, generateCustomTheme } from "@/lib/themes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 export default function AlunoLayout({
@@ -36,15 +36,16 @@ export default function AlunoLayout({
            </div>
 
            <div className="ml-auto flex items-center gap-3">
-             <div className="relative flex items-center bg-muted/50 rounded-full px-2 py-1">
-                <Palette className="w-4 h-4 text-muted-foreground mr-2" />
+             <div className="relative flex items-center gap-1 bg-muted/50 rounded-full px-2 py-1">
+                <Palette className="w-4 h-4 text-muted-foreground ml-1" />
                 <select 
-                  value={activeTheme.id}
+                  value={activeTheme.id === "custom" ? "custom" : activeTheme.id}
                   onChange={(e) => {
+                    if (e.target.value === "custom") return; // Mantém a cor que já está
                     const selected = PRESET_THEMES.find(t => t.id === e.target.value);
                     if (selected) applyTheme(selected);
                   }}
-                  className="bg-transparent border-none text-xs font-medium outline-none cursor-pointer text-foreground appearance-none pr-4"
+                  className="bg-transparent border-none text-xs font-medium outline-none cursor-pointer text-foreground appearance-none pr-2"
                 >
                   <option disabled value="">Temas</option>
                   {PRESET_THEMES.map(theme => (
@@ -52,7 +53,19 @@ export default function AlunoLayout({
                       {theme.name}
                     </option>
                   ))}
+                  <option value="custom">Cores Livres ➜</option>
                 </select>
+                <input 
+                  type="color" 
+                  value={activeTheme.vars["--primary"] || "#3B82F6"}
+                  onChange={(e) => {
+                    const color = e.target.value;
+                    const theme = generateCustomTheme(color);
+                    applyTheme(theme);
+                  }}
+                  className="w-6 h-6 p-0 border-0 rounded-full cursor-pointer overflow-hidden outline-none bg-transparent"
+                  title="Escolha uma cor customizada"
+                />
              </div>
 
              <UserButton />

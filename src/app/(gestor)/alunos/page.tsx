@@ -591,7 +591,7 @@ export default function AlunosPage() {
 
       {/* FICHA DO ALUNO (PROFESSOR) */}
       <Sheet open={!!selectedStudent} onOpenChange={(open: boolean) => !open && setSelectedStudent(null)}>
-        <SheetContent className="w-[400px] sm:w-[540px] glass-card border-none shadow-2xl p-0 h-full overflow-y-auto">
+        <SheetContent className="w-full sm:w-[540px] glass-card border-none shadow-2xl p-0 h-full overflow-y-auto overflow-x-hidden">
           {selectedStudent && (
             <>
               <SheetHeader className="p-6 pb-6 border-b border-border/50 bg-muted/20">

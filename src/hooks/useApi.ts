@@ -74,6 +74,9 @@ export function useApi(academyId?: string) {
         isExemptFromPayment: s.is_exempt || false,
         turmaId: s.turma_id || undefined,
         planId: s.plan_id || undefined,
+        weight: s.weight,
+        guardianName: s.guardian_name,
+        guardianPhone: s.guardian_phone,
       }));
 
       const mappedPayments: Payment[] = (paymentsData || []).map((p: any) => ({
@@ -195,6 +198,10 @@ export function useApi(academyId?: string) {
       turma_id: studentData.turmaId || null,
       plan_id: studentData.planId || null,
       modality: studentData.modality || 'Judô',
+      birth_date: studentData.birthDate || null,
+      weight: studentData.weight || null,
+      guardian_name: studentData.guardianName || null,
+      guardian_phone: studentData.guardianPhone || null,
     };
 
     // Usamos .select() para que o Supabase retorne erro se RLS bloquear
@@ -217,11 +224,11 @@ export function useApi(academyId?: string) {
   const updateStudent = async (studentId: string, updates: Partial<Student>) => {
     // Fazer mapping camelCase -> snake_case antes de enviar
     const payload: any = {};
-    if (updates.name) payload.name = updates.name;
+    if (updates.name !== undefined) payload.name = updates.name;
     if (updates.email !== undefined) payload.email = updates.email;
     if (updates.phone !== undefined) payload.phone = updates.phone;
-    if (updates.beltRank) payload.belt_rank = updates.beltRank;
-    if (updates.status) payload.status = updates.status;
+    if (updates.beltRank !== undefined) payload.belt_rank = updates.beltRank;
+    if (updates.status !== undefined) payload.status = updates.status;
     if (updates.classesAttendedToNextRank !== undefined) payload.classes_attended = updates.classesAttendedToNextRank;
     if (updates.medicalRestrictions !== undefined) payload.medical_notes = updates.medicalRestrictions;
     if (updates.professorNotes !== undefined) payload.professor_notes = updates.professorNotes;
@@ -235,6 +242,10 @@ export function useApi(academyId?: string) {
     if (updates.turmaId !== undefined) payload.turma_id = updates.turmaId ? updates.turmaId : null;
     if (updates.planId !== undefined) payload.plan_id = updates.planId ? updates.planId : null;
     if (updates.modality !== undefined) payload.modality = updates.modality;
+    if (updates.birthDate !== undefined) payload.birth_date = updates.birthDate ? updates.birthDate : null;
+    if (updates.weight !== undefined) payload.weight = updates.weight;
+    if (updates.guardianName !== undefined) payload.guardian_name = updates.guardianName;
+    if (updates.guardianPhone !== undefined) payload.guardian_phone = updates.guardianPhone;
 
     const { error } = await supabase.from('students').update(payload).eq('id', studentId);
     if (error) {
