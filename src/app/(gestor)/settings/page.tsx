@@ -197,16 +197,54 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
+    const newName = academyName || academy.name;
+    const newDoc = academyDoc || academy.documentNumber;
+    const newPix = pixKey || academy.pixKey;
+
     // 1. Atualiza estado local e localStorage imediatamente
     await updateAcademy({
-      name: academyName || academy.name,
-      documentNumber: academyDoc || academy.documentNumber,
-      pixKey: pixKey || academy.pixKey,
+      name: newName,
+      documentNumber: newDoc,
+      pixKey: newPix,
     });
-    // 2. Persiste no Supabase
-    const ok = await saveAcademyToDb();
-    setSaved(ok);
-    setTimeout(() => setSaved(false), 3000);
+
+    // 2. Salva DIRETAMENTE no Supabase com os valores do formulário
+    // (Não usa saveAcademyToDb porque o estado React ainda não atualizou neste ponto)
+    try {
+      const dbPayload: Record<string, any> = {
+        name: newName,
+        document_number: newDoc || null,
+        pix_key: newPix || null,
+        primary_color_hex: academy.primaryColorHex ?? '#3B82F6',
+      };
+
+      // Inclui logo_url se existir e não for base64
+      if (academy.logoUrl && !academy.logoUrl.startsWith('data:')) {
+        dbPayload.logo_url = academy.logoUrl;
+      }
+
+      const { error } = await supabase
+        .from('academies')
+        .update(dbPayload)
+        .eq('id', academy.id);
+
+      if (error) {
+        console.error('handleSave: erro ao salvar no banco:', error);
+        setSaved(false);
+        alert(`Erro ao salvar: ${error.message}`);
+        return;
+      }
+
+      // Atualiza cache local com dados confirmados
+      const updatedAcademy = { ...academy, name: newName, documentNumber: newDoc, pixKey: newPix };
+      localStorage.setItem('academy-data', JSON.stringify(updatedAcademy));
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('handleSave: exceção:', err);
+      alert('Erro inesperado ao salvar. Verifique o console.');
+    }
   };
 
   return (
