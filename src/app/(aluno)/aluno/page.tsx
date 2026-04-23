@@ -108,7 +108,7 @@ export default function AlunoDashboard() {
     'MARROM': '#92400E',
     'PRETA': '#1F2937',
   };
-  const myBeltColor = BELT_COLORS[student.beltRank] || '#3B82F6';
+  const myBeltColor = BELT_COLORS[student.beltRank?.toUpperCase()] || '#3B82F6';
 
   const BELT_ORDER = ['BRANCA', 'CINZA', 'AZUL', 'AMARELA', 'LARANJA', 'VERDE', 'ROXA', 'MARROM', 'PRETA'];
   const currentBeltIndex = BELT_ORDER.indexOf(student.beltRank?.toUpperCase() || 'BRANCA');
