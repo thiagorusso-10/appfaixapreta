@@ -110,6 +110,13 @@ export default function AlunoDashboard() {
   };
   const myBeltColor = BELT_COLORS[student.beltRank] || '#3B82F6';
 
+  const BELT_ORDER = ['BRANCA', 'CINZA', 'AZUL', 'AMARELA', 'LARANJA', 'VERDE', 'ROXA', 'MARROM', 'PRETA'];
+  const currentBeltIndex = BELT_ORDER.indexOf(student.beltRank?.toUpperCase() || 'BRANCA');
+  const nextBeltRank = currentBeltIndex !== -1 && currentBeltIndex < BELT_ORDER.length - 1 
+    ? BELT_ORDER[currentBeltIndex + 1] 
+    : student.beltRank;
+  const nextBeltColor = BELT_COLORS[nextBeltRank] || '#3B82F6';
+
   return (
     <div className="space-y-6 animate-slide-up pb-8 max-w-lg mx-auto">
       
@@ -194,49 +201,100 @@ export default function AlunoDashboard() {
          </div>
       )}
 
-      {/* Progress Card - Gamified */}
-      <Card className="glass-card border-0 overflow-hidden relative">
-         <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-primary via-primary/80 to-primary/50" />
-         <CardHeader className="pb-2 pt-5">
+      {/* Progress Card - Ultra Gamified */}
+      <Card 
+        className="glass-card border-0 overflow-hidden relative shadow-lg transition-transform hover:scale-[1.01] duration-300"
+        style={{
+          background: `linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--card)) 40%, ${nextBeltColor}15 100%)`,
+        }}
+      >
+         <div 
+           className="absolute top-0 left-0 w-full h-1.5" 
+           style={{ background: `linear-gradient(90deg, ${myBeltColor}, ${nextBeltColor})` }}
+         />
+         
+         <CardHeader className="pb-3 pt-6 relative z-10">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-4 w-4 text-primary" />
-                  Próxima Graduação
+                <CardTitle className="text-xl flex items-center gap-2 font-black tracking-tight">
+                  <Target className="h-5 w-5" style={{ color: nextBeltColor }} />
+                  Próxima Faixa
                 </CardTitle>
-                <CardDescription>Rumo à nova faixa</CardDescription>
+                <CardDescription className="font-medium mt-1">Rumo à faixa <strong style={{ color: nextBeltColor }}>{nextBeltRank}</strong></CardDescription>
               </div>
-              <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full">
-                <Trophy className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-bold text-primary">{Math.round(progressValue)}%</span>
+              <div 
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full shadow-sm border"
+                style={{ backgroundColor: `${nextBeltColor}15`, borderColor: `${nextBeltColor}30` }}
+              >
+                <Trophy className="h-4 w-4" style={{ color: nextBeltColor }} />
+                <span className="text-sm font-bold" style={{ color: nextBeltColor }}>{Math.round(progressValue)}%</span>
               </div>
             </div>
          </CardHeader>
-         <CardContent>
-            <div className="flex justify-between text-sm mb-3 font-medium">
-               <span className="text-foreground flex items-center gap-1.5">
-                 <div className="h-3 w-6 rounded-sm shadow-sm border border-border/20" style={{ backgroundColor: myBeltColor }} />
-                 Faixa {student.beltRank}
-               </span>
-               <span className="text-primary font-bold">{classesAttended} / {classesTarget}</span>
+         <CardContent className="relative z-10 pb-6">
+            
+            {/* Visual da Faixa Atual */}
+            <div className="mb-6 flex flex-col gap-2">
+               <div className="flex justify-between items-end">
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sua Faixa Atual</span>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: myBeltColor }}>{student.beltRank}</span>
+               </div>
+               
+               {/* Faixa Realista 3D */}
+               <div className="relative h-8 w-full rounded-sm shadow-md overflow-hidden flex items-center border border-black/10 group" style={{ backgroundColor: myBeltColor }}>
+                  {/* Textura de Tecido (Overlay) */}
+                  <div className="absolute inset-0 bg-black/5 mix-blend-overlay flex flex-col justify-between">
+                    <div className="w-full h-[1px] bg-white/20"></div>
+                    <div className="w-full h-[1px] bg-black/20"></div>
+                  </div>
+                  
+                  {/* Ponteira Preta/Vermelha (Graus) */}
+                  <div 
+                    className="absolute right-0 h-full w-16 flex items-center justify-end px-1.5 gap-1 border-l border-black/20 shadow-inner" 
+                    style={{ backgroundColor: (myBeltColor === '#FFFFFF' || myBeltColor === '#1F2937') ? '#DC2626' : '#1F2937' }}
+                  >
+                     {Array.from({ length: student.beltDegree || 0 }).map((_, i) => (
+                        <div key={i} className="h-full w-1.5 bg-white shadow-sm opacity-90" />
+                     ))}
+                  </div>
+               </div>
             </div>
-            <div className="relative">
-              <Progress value={progressValue} className="h-4 rounded-full" />
+
+            {/* Barra de Progresso Redesenhada */}
+            <div className="space-y-2 mb-2">
+              <div className="flex justify-between text-sm font-black">
+                 <span className="text-foreground/70">Treinos Concluídos</span>
+                 <span>
+                    <span style={{ color: myBeltColor }}>{classesAttended}</span>
+                    <span className="text-muted-foreground mx-1">/</span>
+                    <span style={{ color: nextBeltColor }}>{classesTarget}</span>
+                 </span>
+              </div>
+              <div className="relative h-4 w-full bg-muted/50 rounded-full overflow-hidden shadow-inner border border-border/40">
+                <div 
+                  className="absolute top-0 left-0 h-full transition-all duration-1000 ease-out"
+                  style={{ 
+                    width: `${Math.min(100, progressValue)}%`, 
+                    background: `linear-gradient(90deg, ${myBeltColor}, ${nextBeltColor})` 
+                  }}
+                />
+              </div>
             </div>
             
+            {/* Call to Action ou Alerta de Exame */}
             {isApto ? (
-               <div className="mt-4 flex items-center justify-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-linear-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 translate-x-[-100%] animate-[shimmer_2s_infinite]" />
-                  <Trophy className="h-5 w-5 text-emerald-600 drop-shadow-md" />
-                  <p className="text-sm font-bold text-emerald-700 uppercase tracking-wider relative z-10">
-                    APTO PARA O EXAME
+               <div className="mt-5 flex items-center justify-center gap-2 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl relative overflow-hidden shadow-sm">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/20 to-emerald-500/0 translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                  <Trophy className="h-6 w-6 text-emerald-600 drop-shadow-md animate-bounce" />
+                  <p className="text-sm font-black text-emerald-700 uppercase tracking-widest relative z-10">
+                    APTO PARA O EXAME! 🥋
                   </p>
                </div>
             ) : (
-               <div className="mt-4 flex items-center justify-center gap-2 p-3 bg-secondary/50 rounded-xl">
-                 <Flame className="h-4 w-4 text-amber-500" />
-                 <p className="text-sm font-medium text-foreground">
-                   Faltam <span className="text-primary font-bold">{remainingClasses}</span> presenças para o exame!
+               <div className="mt-5 flex items-center justify-center gap-2 p-3 bg-card border border-border/50 rounded-xl shadow-sm">
+                 <Flame className="h-5 w-5 text-amber-500 animate-pulse" />
+                 <p className="text-sm font-semibold text-foreground">
+                   Faltam <span className="font-black text-lg px-1" style={{ color: nextBeltColor }}>{remainingClasses}</span> presenças para o exame!
                  </p>
                </div>
             )}
