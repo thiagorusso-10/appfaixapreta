@@ -36,35 +36,24 @@ export default function AlunoLayout({
            </div>
 
            <div className="ml-auto flex items-center gap-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger className="p-2 rounded-full hover:bg-muted transition-colors outline-none">
-                  <Palette className="w-5 h-5 text-muted-foreground" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Aparência (Temas)</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+             <div className="relative flex items-center bg-muted/50 rounded-full px-2 py-1">
+                <Palette className="w-4 h-4 text-muted-foreground mr-2" />
+                <select 
+                  value={activeTheme.id}
+                  onChange={(e) => {
+                    const selected = PRESET_THEMES.find(t => t.id === e.target.value);
+                    if (selected) applyTheme(selected);
+                  }}
+                  className="bg-transparent border-none text-xs font-medium outline-none cursor-pointer text-foreground appearance-none pr-4"
+                >
+                  <option disabled value="">Temas</option>
                   {PRESET_THEMES.map(theme => (
-                    <DropdownMenuItem 
-                      key={theme.id} 
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        // setTimeout evita o crash do Radix UI ao desmontar enquanto o React faz re-render global
-                        setTimeout(() => {
-                          try {
-                            applyTheme(theme);
-                          } catch (err) {
-                            console.error('Erro ao aplicar tema:', err);
-                          }
-                        }, 10);
-                      }}
-                      className="flex items-center gap-3 cursor-pointer"
-                    >
-                      <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: theme.vars["--primary"] }} />
-                      <span className={activeTheme.id === theme.id ? "font-bold" : ""}>{theme.name}</span>
-                    </DropdownMenuItem>
+                    <option key={theme.id} value={theme.id}>
+                      {theme.name}
+                    </option>
                   ))}
-                </DropdownMenuContent>
-             </DropdownMenu>
+                </select>
+             </div>
 
              <UserButton />
            </div>

@@ -24,12 +24,14 @@ export default function ErrorPage({
           <AlertTriangle className="h-8 w-8" />
         </div>
         
-        <div className="space-y-2">
-          <h2 className="text-xl font-bold text-foreground">Algo deu errado!</h2>
-          <p className="text-muted-foreground text-sm">
-            Houve um problema inesperado de comunicação com nossos servidores. 
-            Não se preocupe, seus dados estão salvos.
-          </p>
+        <div className="space-y-2 text-left bg-muted p-4 rounded-xl overflow-auto text-xs font-mono max-h-48 border border-border">
+          <p className="text-destructive font-bold mb-1">Causa do erro:</p>
+          <p className="text-foreground">{error.message}</p>
+          {error.stack && (
+            <p className="text-muted-foreground mt-2 opacity-70 whitespace-pre-wrap">
+              {error.stack.substring(0, 300)}...
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 pt-2">
