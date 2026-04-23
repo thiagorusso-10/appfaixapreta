@@ -182,9 +182,13 @@ export default function FinanceiroPage() {
     }
 
     if (confirm(msg)) {
-       const qty = await generateMonthlyInvoices(selectedMonth, selectedYear, 150);
-       alert(`${qty} boletos lançados com sucesso! Se for 0, é porque não haviam alunos sem fatura no período.`);
-       setRefresh(r => r + 1);
+       try {
+         const qty = await generateMonthlyInvoices(selectedMonth, selectedYear, 150);
+         alert(`${qty} boletos lançados com sucesso! Se for 0, é porque não haviam alunos sem fatura no período.`);
+         setRefresh(r => r + 1);
+       } catch (err: any) {
+         alert(`❌ Erro ao gerar faturas: ${err.message}\n\nIsso pode ser um problema de permissão (RLS) no banco de dados.`);
+       }
     }
   };
 

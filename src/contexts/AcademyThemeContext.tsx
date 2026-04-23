@@ -208,24 +208,25 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
   // ─── Tema ──────────────────────────────────────────────────────────────
   const applyTheme = (theme: ThemeDefinition) => {
     if (!theme || !theme.vars) return;
+    if (typeof document === 'undefined') return; // SSR guard
 
-    setActiveTheme(theme);
-    const root = document.documentElement;
-    
-    // Proteção contra threads de renderização do Next.js
-    requestAnimationFrame(() => {
-      root.classList.toggle('dark', theme.isDark);
+    try {
+      setActiveTheme(theme);
+      const root = document.documentElement;
+      
+      // Aplicar imediatamente (sem requestAnimationFrame para evitar conflito com Radix UI)
+      root.classList.toggle('dark', !!theme.isDark);
       Object.entries(theme.vars).forEach(([key, value]) => {
         if (value) root.style.setProperty(key, value);
       });
       if (theme.vars["--primary"]) {
         root.style.setProperty("--color-primary", theme.vars["--primary"]);
       }
-    });
 
-    try {
       localStorage.setItem('academy-theme-id', theme.id);
-    } catch(e) {}
+    } catch (err) {
+      console.error('applyTheme: erro ao aplicar tema:', err);
+    }
   };
 
   // ─── Efeito inicial: carrega dados ────────────────────────────────────

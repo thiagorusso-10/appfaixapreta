@@ -46,7 +46,14 @@ export default function AlunoLayout({
                   {PRESET_THEMES.map(theme => (
                     <DropdownMenuItem 
                       key={theme.id} 
-                      onClick={() => applyTheme(theme)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        try {
+                          applyTheme(theme);
+                        } catch (err) {
+                          console.error('Erro ao aplicar tema:', err);
+                        }
+                      }}
                       className="flex items-center gap-3 cursor-pointer"
                     >
                       <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: theme.vars["--primary"] }} />

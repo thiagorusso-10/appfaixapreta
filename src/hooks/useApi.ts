@@ -294,7 +294,31 @@ export function useApi(academyId?: string) {
   };
 
   const generateMonthlyInvoices = async (monthIndex: number, year: number, defaultAmount: number = 150) => {
-    if (!academyId || students.length === 0) return 0;
+    if (!academyId) return 0;
+    
+    // Se students ainda não carregou, buscar novamente
+    if (students.length === 0) {
+      console.warn('generateMonthlyInvoices: lista de students vazia, tentando recarregar...');
+      await fetchData();
+      // Precisamos usar o estado atualizado — mas pelo closure, students pode estar stale
+      // Vamos buscar direto do banco
+    }
+
+    // Buscar alunos diretamente do banco para evitar problema de closure/state stale
+    const { data: freshStudents, error: studentsError } = await supabase
+      .from('students')
+      .select('id, name, status, is_exempt')
+      .eq('academy_id', academyId);
+
+    if (studentsError) {
+      console.error('generateMonthlyInvoices: erro ao buscar alunos:', studentsError);
+      throw new Error(`Erro ao buscar alunos: ${studentsError.message}`);
+    }
+
+    if (!freshStudents || freshStudents.length === 0) {
+      console.warn('generateMonthlyInvoices: nenhum aluno encontrado para esta academia');
+      return 0;
+    }
 
     // Achar início e fim do mês
     const startObj = new Date(year, monthIndex, 1);
@@ -304,19 +328,25 @@ export function useApi(academyId?: string) {
     const endStr = endObj.toISOString().split('T')[0];
 
     // Verificar quem já tem fatura nesse período
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('payments')
       .select('student_id')
       .eq('academy_id', academyId)
       .gte('due_date', startStr)
       .lte('due_date', endStr);
 
+    if (existingError) {
+      console.error('generateMonthlyInvoices: erro ao verificar faturas existentes:', existingError);
+    }
+
     const existingStudentIds = new Set((existing || []).map((p: any) => p.student_id));
-    const activeStudents = students.filter(s => s.status === 'ATIVO' && !s.isExemptFromPayment);
+    const activeStudents = freshStudents.filter((s: any) => s.status === 'ATIVO' && !s.is_exempt);
+
+    console.log(`generateMonthlyInvoices: ${activeStudents.length} alunos ativos não-isentos encontrados. ${existingStudentIds.size} já possuem fatura no período.`);
 
     const toInsert = activeStudents
-      .filter(s => !existingStudentIds.has(s.id))
-      .map(s => {
+      .filter((s: any) => !existingStudentIds.has(s.id))
+      .map((s: any) => {
         const dueDate = new Date(year, monthIndex, 10);
         const isLate = dueDate.getTime() < new Date().setHours(0,0,0,0);
         return {
@@ -330,7 +360,11 @@ export function useApi(academyId?: string) {
       });
 
     if (toInsert.length > 0) {
-      await supabase.from('payments').insert(toInsert);
+      const { error: insertError } = await supabase.from('payments').insert(toInsert);
+      if (insertError) {
+        console.error('generateMonthlyInvoices: erro ao inserir faturas:', insertError);
+        throw new Error(`Erro ao salvar faturas no banco: ${insertError.message}`);
+      }
       await fetchData();
     }
 
