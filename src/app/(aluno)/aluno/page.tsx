@@ -258,29 +258,19 @@ export default function AlunoDashboard() {
                   {/* Efeito de Volume (Sombra e Luz) */}
                   <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-black/30 mix-blend-overlay pointer-events-none"></div>
 
-                  {/* Etiqueta na Faixa (Imitando a marca da faixa) */}
+                  {/* Etiqueta na Faixa (Nome da Faixa) */}
                   <div className="absolute left-3 bg-black/80 px-2 py-1 rounded-sm border border-black z-10 shadow-sm flex items-center justify-center">
-                    <span className="text-[8px] font-black tracking-widest uppercase text-white/90">JUDÔ</span>
+                    <span className="text-[10px] font-black tracking-widest uppercase text-white/90">{student.beltRank}</span>
                   </div>
                   
-                  {/* Ponteira Preta/Vermelha (Onde vão os Graus) */}
-                  <div 
-                    className="absolute right-0 top-0 h-full w-24 flex items-center justify-end px-2.5 gap-1.5 border-l-2 border-black/40 shadow-inner z-10" 
-                    style={{ backgroundColor: myBeltColor === '#1F2937' ? '#DC2626' : '#1F2937' }}
-                  >
-                     {/* Costuras também na ponteira */}
-                     <div className="absolute inset-0 flex flex-col justify-evenly py-0.5 opacity-20 mix-blend-overlay pointer-events-none">
-                       <div className="w-full h-[1px] border-b-2 border-dashed border-white/60"></div>
-                       <div className="w-full h-[1px] border-b-2 border-dashed border-white/60"></div>
-                       <div className="w-full h-[1px] border-b-2 border-dashed border-white/60"></div>
-                       <div className="w-full h-[1px] border-b-2 border-dashed border-white/60"></div>
-                       <div className="w-full h-[1px] border-b-2 border-dashed border-white/60"></div>
-                       <div className="w-full h-[1px] border-b-2 border-dashed border-white/60"></div>
-                     </div>
-
-                     {/* Graus (Esparadrapos) */}
+                  {/* Graus diretos na Faixa */}
+                  <div className="absolute right-3 top-0 h-full flex items-center justify-end gap-1.5 z-20">
                      {Array.from({ length: student.beltDegree || 0 }).map((_, i) => (
-                        <div key={i} className="h-full w-2.5 bg-white shadow-sm border-x border-black/10 z-20" />
+                        <div 
+                          key={i} 
+                          className="h-full w-2.5 shadow-sm border-x border-black/20" 
+                          style={{ backgroundColor: ['BRANCA', 'PRETA'].includes(student.beltRank.toUpperCase()) ? '#DC2626' : '#FFFFFF' }}
+                        />
                      ))}
                   </div>
                </div>
