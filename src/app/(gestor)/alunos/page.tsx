@@ -429,9 +429,9 @@ export default function AlunosPage() {
                  </div>
                </div>
 
-                {/* Seção 3: Isenção Infantil */}
+                {/* Seção 3: Isenção Infantil / Responsável */}
                <div className="bg-muted/40 p-4 rounded-xl border border-border/50 space-y-4">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 pb-2">
                      <input 
                         type="checkbox" 
                         id="isExemptFromPayment" 
@@ -440,22 +440,20 @@ export default function AlunosPage() {
                         onChange={handleChange}
                      />
                      <Label htmlFor="isExemptFromPayment" className="font-semibold cursor-pointer">
-                        Aluno Isento / Menor de Idade (Kids)
+                        Aluno Isento de Mensalidade (Não gerar faturas)
                      </Label>
                   </div>
                   
-                  {formData.isExemptFromPayment && (
-                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/50 animate-in fade-in zoom-in-95">
-                        <div className="grid gap-2">
-                          <Label htmlFor="guardianName">Responsável / Tutor (Obrigatório)</Label>
-                          <Input id="guardianName" placeholder="Identifique o Pai/Mãe" value={formData.guardianName || ""} onChange={handleChange} />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="guardianPhone">Contato Responsável</Label>
-                          <Input id="guardianPhone" type="tel" placeholder="Telefone de Emergência" value={formData.guardianPhone || ""} onChange={handleChange} />
-                        </div>
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/50">
+                     <div className="grid gap-2">
+                       <Label htmlFor="guardianName">Responsável / Tutor (Para Menores de Idade)</Label>
+                       <Input id="guardianName" placeholder="Identifique o Pai/Mãe" value={formData.guardianName || ""} onChange={handleChange} />
                      </div>
-                  )}
+                     <div className="grid gap-2">
+                       <Label htmlFor="guardianPhone">Contato Responsável</Label>
+                       <Input id="guardianPhone" type="tel" placeholder="Telefone de Emergência" value={formData.guardianPhone || ""} onChange={handleChange} />
+                     </div>
+                  </div>
                </div>
 
                {/* Seção 4: Biometria */}
@@ -603,10 +601,10 @@ export default function AlunosPage() {
                        {selectedStudent.name.charAt(0)}
                     </div>
                   )}
-                  <div className="flex flex-col text-left flex-1">
-                    <span className="text-xl tracking-tight">{selectedStudent.name}</span>
-                    <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mt-1">
-                      <span>{selectedStudent.email || "Sem e-mail"}</span>
+                  <div className="flex flex-col text-left flex-1 min-w-0">
+                    <span className="text-xl tracking-tight truncate">{selectedStudent.name}</span>
+                    <div className="text-sm font-medium text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
+                      <span className="truncate max-w-[200px]">{selectedStudent.email || "Sem e-mail"}</span>
                       <span>•</span>
                       <span className="text-primary font-bold">{selectedStudent.modality}</span>
                       <span>•</span>

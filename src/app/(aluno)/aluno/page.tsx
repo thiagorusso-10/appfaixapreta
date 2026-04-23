@@ -98,15 +98,15 @@ export default function AlunoDashboard() {
   const checkInStreak = calculateStreak();
 
   const BELT_COLORS: Record<string, string> = {
-    'Branca': '#FFFFFF',
-    'Cinza': '#9CA3AF',
-    'Azul': '#3B82F6',
-    'Amarela': '#EAB308',
-    'Laranja': '#F97316',
-    'Verde': '#22C55E',
-    'Roxa': '#8B5CF6',
-    'Marrom': '#92400E',
-    'Preta': '#1F2937',
+    'BRANCA': '#FFFFFF',
+    'CINZA': '#9CA3AF',
+    'AZUL': '#3B82F6',
+    'AMARELA': '#EAB308',
+    'LARANJA': '#F97316',
+    'VERDE': '#22C55E',
+    'ROXA': '#8B5CF6',
+    'MARROM': '#92400E',
+    'PRETA': '#1F2937',
   };
   const myBeltColor = BELT_COLORS[student.beltRank] || '#3B82F6';
 
