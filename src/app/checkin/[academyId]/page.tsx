@@ -4,7 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { createClient } from "@supabase/supabase-js";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertTriangle, QrCode, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, QrCode, Loader2, XCircle, ArrowLeft } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,12 +51,15 @@ export default function CheckinPage() {
       setAcademyName(academy.name);
 
       // 2. Buscar o aluno pelo e-mail dentro da academia
-      const { data: student, error: studentError } = await supabase
+      // O campo email pode conter múltiplos emails separados por vírgula
+      // Então usamos ilike com % para buscar parcialmente
+      const { data: studentsFound, error: studentError } = await supabase
         .from("students")
         .select("id, name, classes_attended")
         .eq("academy_id", academyId)
-        .eq("email", userEmail)
-        .single();
+        .ilike("email", `%${userEmail}%`);
+
+      const student = studentsFound && studentsFound.length > 0 ? studentsFound[0] : null;
 
       if (studentError || !student) {
         setState("not_found");
@@ -133,7 +136,6 @@ export default function CheckinPage() {
 
   useEffect(() => {
     if (isLoaded && !user) {
-      // Redireciona para login e volta para cá depois
       router.push(`/sign-in?redirect_url=/checkin/${academyId}`);
       return;
     }
@@ -141,6 +143,15 @@ export default function CheckinPage() {
       doCheckin();
     }
   }, [isLoaded, user, doCheckin, router, academyId]);
+
+  const handleGoBack = () => {
+    // Tenta voltar para a tela anterior. Se não tiver histórico, vai para o dashboard do aluno
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/aluno");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
@@ -152,7 +163,7 @@ export default function CheckinPage() {
           {/* Header */}
           <div className="bg-white/5 px-6 py-4 border-b border-white/10 flex items-center gap-3">
             <QrCode className="h-6 w-6 text-blue-400" />
-            <div>
+            <div className="flex-1">
               <h1 className="text-white font-bold text-lg">Check-in via QR Code</h1>
               {academyName && <p className="text-white/60 text-xs">{academyName}</p>}
             </div>
@@ -234,6 +245,19 @@ export default function CheckinPage() {
             )}
 
           </div>
+
+          {/* Botão Voltar (aparece após concluir o loading) */}
+          {state !== "loading" && (
+            <div className="px-6 pb-6">
+              <button
+                onClick={handleGoBack}
+                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-2xl transition-all duration-200 border border-white/10"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                Voltar para o App
+              </button>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="bg-white/5 px-6 py-4 border-t border-white/10 text-center">
