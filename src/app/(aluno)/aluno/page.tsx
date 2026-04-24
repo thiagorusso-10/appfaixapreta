@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { CheckCircle2, AlertTriangle, PlayCircle, MapPin, Trophy, Flame, Target, Swords, Copy, QrCode } from "lucide-react";
+import { CheckCircle2, AlertTriangle, PlayCircle, MapPin, Trophy, Flame, Target, Swords, Copy, QrCode, Camera, X, Loader2 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StudentTechnique } from "@/lib/types";
 
 export default function AlunoDashboard() {
@@ -27,6 +27,83 @@ export default function AlunoDashboard() {
   const [selectedTech, setSelectedTech] = useState<StudentTechnique | null>(null);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [scannerStatus, setScannerStatus] = useState<'scanning' | 'processing' | 'success' | 'error'>('scanning');
+  const [scannerMsg, setScannerMsg] = useState('');
+  const scannerRef = useRef<any>(null);
+  const scannerContainerId = 'qr-reader-container';
+
+  // Inicializar/destruir o scanner QR
+  useEffect(() => {
+    if (!showQrScanner) {
+      // Limpar scanner ao fechar
+      if (scannerRef.current) {
+        try { scannerRef.current.stop(); } catch (e) {}
+        scannerRef.current = null;
+      }
+      return;
+    }
+
+    // Esperar o DOM montar o container
+    const timer = setTimeout(async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        const scanner = new Html5Qrcode(scannerContainerId);
+        scannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText: string) => {
+            // QR lido! Parar scanner e processar
+            try { await scanner.stop(); } catch (e) {}
+            setScannerStatus('processing');
+
+            // Verificar se a URL do QR contém /checkin/
+            if (decodedText.includes('/checkin/')) {
+              // Navegar para a página de checkin
+              window.location.href = decodedText;
+            } else {
+              setScannerStatus('error');
+              setScannerMsg('QR Code inválido. Use o QR Code da academia.');
+              setTimeout(() => {
+                setScannerStatus('scanning');
+                setScannerMsg('');
+                // Reiniciar scanner
+                try {
+                  scanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    () => {},
+                    () => {}
+                  );
+                } catch (e) {}
+              }, 2500);
+            }
+          },
+          () => {} // erro de scan silencioso (normal enquanto aponta)
+        );
+      } catch (err: any) {
+        console.error('Erro ao iniciar câmera:', err);
+        setScannerStatus('error');
+        setScannerMsg('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      if (scannerRef.current) {
+        try { scannerRef.current.stop(); } catch (e) {}
+        scannerRef.current = null;
+      }
+    };
+  }, [showQrScanner]);
+
+  const closeScanner = () => {
+    setShowQrScanner(false);
+    setScannerStatus('scanning');
+    setScannerMsg('');
+  };
 
   if (!academy || isLoading) return null;
 
@@ -153,13 +230,53 @@ export default function AlunoDashboard() {
       <Button 
          size="lg" 
          className={`w-full h-16 text-lg font-bold rounded-2xl shadow-lg transition-all duration-300 shadow-primary/25 bg-linear-to-r from-primary to-primary/80 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.01]`}
-         onClick={() => {
-           window.location.href = `/checkin/${academy?.id}`;
-         }}
+         onClick={() => setShowQrScanner(true)}
       >
-         <QrCode className="mr-2 h-6 w-6" /> 
-         Fazer Check-in no Treino
+         <Camera className="mr-2 h-6 w-6" /> 
+         Escanear QR Code do Treino
       </Button>
+
+      {/* Modal Scanner QR */}
+      {showQrScanner && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-card rounded-3xl overflow-hidden shadow-2xl border border-border/50">
+            {/* Header do Scanner */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+              <div className="flex items-center gap-2">
+                <QrCode className="h-5 w-5 text-primary" />
+                <span className="font-bold text-foreground">Escanear QR Code</span>
+              </div>
+              <button onClick={closeScanner} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center hover:bg-destructive/20 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Área da câmera */}
+            <div className="relative bg-black aspect-square">
+              {scannerStatus === 'scanning' && (
+                <div id={scannerContainerId} className="w-full h-full" />
+              )}
+              {scannerStatus === 'processing' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80">
+                  <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                  <p className="text-white font-semibold">Registrando presença...</p>
+                </div>
+              )}
+              {scannerStatus === 'error' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-6">
+                  <AlertTriangle className="h-12 w-12 text-amber-400" />
+                  <p className="text-white font-semibold text-center text-sm">{scannerMsg}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Instrução */}
+            <div className="px-5 py-4 text-center">
+              <p className="text-sm text-muted-foreground">Aponte a câmera para o <strong>QR Code da academia</strong></p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Financial Alert */}
       {hasDelayedPayment ? (

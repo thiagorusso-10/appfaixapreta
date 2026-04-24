@@ -5,8 +5,8 @@ import { useApi } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { QrCode, Printer, UserCheck, AlertTriangle, CheckCircle2, Clock, Users, CalendarDays, Info, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { QrCode, Printer, UserCheck, AlertTriangle, CheckCircle2, Clock, Users, CalendarDays, Info, Trash2, CheckSquare } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 const BELT_COLORS: Record<string, string> = {
   BRANCA: "bg-white text-black border-gray-300",
@@ -35,10 +35,13 @@ export default function CheckinQrPage() {
   const { academy } = useAcademy();
   const { students, checkins, recordCheckIn, deleteCheckIn, isLoading, turmas } = useApi(academy?.id);
   const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState("all");
   const [isDeleting, setIsDeleting] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [feed, setFeed] = useState<CheckInEntry[]>([]);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (students && students.length > 0) {
@@ -99,6 +102,82 @@ export default function CheckinQrPage() {
     }
   };
 
+  // Check-in em lote
+  const handleBatchCheckIn = async () => {
+    if (selectedStudentIds.length === 0) {
+      alert('Selecione ao menos um aluno.');
+      return;
+    }
+    setIsBatchProcessing(true);
+    let successCount = 0;
+    let errorCount = 0;
+    for (const sid of selectedStudentIds) {
+      try {
+        const result = await recordCheckIn(sid, selectedDate);
+        if (result?.error) {
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch {
+        errorCount++;
+      }
+    }
+    setIsBatchProcessing(false);
+    setSelectedStudentIds([]);
+    alert(`✅ ${successCount} presenças registradas com sucesso!${errorCount > 0 ? `\n⚠️ ${errorCount} falharam (possivelmente já registrados).` : ''}`);
+  };
+
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const selectAll = () => {
+    const filteredStudents = students
+      .filter(s => s.status === 'ATIVO' || s.status === 'INATIVO')
+      .filter(s => selectedTurma === 'all' || s.turmaId === selectedTurma);
+    const allIds = filteredStudents.map(s => s.id);
+    setSelectedStudentIds(prev => prev.length === allIds.length ? [] : allIds);
+  };
+
+  // Imprimir QR Code
+  const handlePrintQr = () => {
+    const qrUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/checkin/${academy?.id}`;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>QR Code Check-in - ${academy?.name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: white; }
+          .container { text-align: center; padding: 40px; }
+          h1 { font-size: 28px; margin-bottom: 8px; color: #111; }
+          h2 { font-size: 18px; font-weight: normal; color: #666; margin-bottom: 32px; }
+          img { border: 4px solid #111; border-radius: 16px; padding: 16px; background: white; }
+          .footer { margin-top: 32px; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 3px; }
+          .instruction { margin-top: 24px; font-size: 16px; color: #333; background: #f3f4f6; padding: 16px 24px; border-radius: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>${academy?.name}</h1>
+          <h2>Registre sua presen\u00e7a</h2>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrUrl)}" alt="QR Code" width="300" height="300" />
+          <div class="instruction">\uD83D\uDCF1 Abra a c\u00e2mera do celular e aponte para o QR Code</div>
+          <p class="footer">Faixa Preta \u2022 Sistema de Gest\u00e3o de Artes Marciais</p>
+        </div>
+        <script>window.onload = function() { window.print(); }</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -132,50 +211,90 @@ export default function CheckinQrPage() {
               <p className="text-muted-foreground text-xs max-w-[250px]">
                 Aponte a câmera do celular para registrar presença instantaneamente.
               </p>
-              <Button variant="outline" className="mt-4 rounded-xl w-full text-xs">
+              <Button variant="outline" className="mt-4 rounded-xl w-full text-xs" onClick={handlePrintQr}>
                 <Printer className="h-3.5 w-3.5 mr-2" /> Imprimir Cartaz
               </Button>
             </CardContent>
           </Card>
 
-          {/* Simulador de Check-in (para testes sem QR real) */}
+          {/* Simulador de Check-in (Individual + Lote) */}
           <Card className="glass-card border-0 bg-primary/5 border-primary/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-primary" />
-                Simulador de Check-in
+                Registrar Presenças
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">Selecione um aluno para simular a leitura do QR Code na recepção:</p>
-              <select
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                value={selectedStudentId}
-                onChange={e => setSelectedStudentId(e.target.value)}
-              >
+              <p className="text-xs text-muted-foreground">Selecione alunos para registrar presença manualmente (individual ou em lote):</p>
+              
+              {/* Botão Selecionar Todos */}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={selectAll}
+                  className="text-xs text-primary font-semibold flex items-center gap-1.5 hover:underline"
+                >
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  {selectedStudentIds.length === students.filter(s => (s.status === 'ATIVO' || s.status === 'INATIVO') && (selectedTurma === 'all' || s.turmaId === selectedTurma)).length ? 'Desmarcar todos' : 'Selecionar todos'}
+                </button>
+                {selectedStudentIds.length > 0 && (
+                  <span className="text-xs text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">
+                    {selectedStudentIds.length} selecionado(s)
+                  </span>
+                )}
+              </div>
+
+              {/* Lista de alunos com checkbox */}
+              <div className="max-h-[240px] overflow-y-auto space-y-1 rounded-xl border border-border/30 p-2 bg-background/50">
                 {students
                   .filter(s => s.status === "ATIVO" || s.status === "INATIVO")
                   .filter(s => selectedTurma === "all" || s.turmaId === selectedTurma)
                   .map(s => {
-                  const alreadyCheckedIn = checkins.some(c => {
-                    const checkinDate = new Date(c.timestamp);
-                    const today = new Date();
-                    return c.studentId === s.id 
-                      && checkinDate.getDate() === today.getDate()
-                      && checkinDate.getMonth() === today.getMonth()
-                      && checkinDate.getFullYear() === today.getFullYear();
-                  });
-                  return (
-                    <option key={s.id} value={s.id}>
-                      {alreadyCheckedIn ? "✅ " : ""}{s.name} — Faixa {s.beltRank}
-                    </option>
-                  );
-                })}
-              </select>
-              <Button className="w-full rounded-xl shadow-lg shadow-primary/20" onClick={handleCheckIn}>
-                <QrCode className="h-4 w-4 mr-2" /> Registrar Presença
-              </Button>
-              <div className="flex items-start gap-2 mt-4 bg-amber-500/10 rounded-lg p-2.5 text-xs text-amber-700 border border-amber-500/20">
+                    const alreadyCheckedIn = feed.some(f => f.studentId === s.id);
+                    const isSelected = selectedStudentIds.includes(s.id);
+                    return (
+                      <label
+                        key={s.id}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                          alreadyCheckedIn 
+                            ? 'bg-emerald-500/10 opacity-60' 
+                            : isSelected 
+                              ? 'bg-primary/10 ring-1 ring-primary/30' 
+                              : 'hover:bg-muted/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
+                          checked={isSelected}
+                          disabled={alreadyCheckedIn}
+                          onChange={() => toggleStudentSelection(s.id)}
+                        />
+                        <span className="flex-1 truncate">
+                          {alreadyCheckedIn && '✅ '}{s.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground uppercase">Faixa {s.beltRank}</span>
+                      </label>
+                    );
+                  })}
+              </div>
+
+              {/* Botões de ação */}
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1 rounded-xl shadow-lg shadow-primary/20" 
+                  onClick={handleBatchCheckIn}
+                  disabled={selectedStudentIds.length === 0 || isBatchProcessing}
+                >
+                  {isBatchProcessing ? (
+                    <><span className="animate-spin mr-2">⏳</span> Registrando...</>
+                  ) : (
+                    <><CheckSquare className="h-4 w-4 mr-2" /> Registrar {selectedStudentIds.length > 0 ? `(${selectedStudentIds.length})` : ''}</>  
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex items-start gap-2 mt-2 bg-amber-500/10 rounded-lg p-2.5 text-xs text-amber-700 border border-amber-500/20">
                 <Info className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
                   <strong>Inadimplência:</strong> O check-in funcionará, mas o feed alertará caso o aluno esteja bloqueado para comunicar a secretaria.
