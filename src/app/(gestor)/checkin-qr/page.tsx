@@ -39,7 +39,9 @@ export default function CheckinQrPage() {
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState("all");
   const [isDeleting, setIsDeleting] = useState("");
+  const [filterMode, setFilterMode] = useState<"day" | "month">("day");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toLocaleDateString('en-CA').slice(0, 7));
   const [feed, setFeed] = useState<CheckInEntry[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -56,14 +58,19 @@ export default function CheckinQrPage() {
     }
   }, [students, selectedTurma]);
 
-  // Sync feed realtime com banco e com a data do seletor
+  // Sync feed realtime com banco e com a data/mês do seletor
   useEffect(() => {
     if (!students || students.length === 0) return;
     const mapped = checkins
       .filter(c => {
-        // Traz apenas baseando na Data escolhida no topo da tela
-        const cDate = new Date(c.timestamp).toLocaleDateString('en-CA');
-        return cDate === selectedDate;
+        const cDateObj = new Date(c.timestamp);
+        if (filterMode === 'day') {
+          const cDate = cDateObj.toLocaleDateString('en-CA');
+          return cDate === selectedDate;
+        } else {
+          const cMonth = cDateObj.toLocaleDateString('en-CA').slice(0, 7);
+          return cMonth === selectedMonth;
+        }
       })
       .map(c => {
         const student = students.find(s => s.id === c.studentId);
@@ -81,7 +88,7 @@ export default function CheckinQrPage() {
       })
       .filter(c => selectedTurma === "all" || c.turmaId === selectedTurma);
     setFeed(mapped.reverse());
-  }, [checkins, students, selectedDate, selectedTurma]);
+  }, [checkins, students, selectedDate, selectedMonth, filterMode, selectedTurma]);
 
   if (!academy || isLoading) return null;
 
@@ -92,7 +99,8 @@ export default function CheckinQrPage() {
     const student = students.find(s => s.id === selectedStudentId);
 
     try {
-      const result = await recordCheckIn(selectedStudentId, selectedDate);
+      const dateToRecord = filterMode === 'day' ? selectedDate : new Date().toLocaleDateString('en-CA');
+      const result = await recordCheckIn(selectedStudentId, dateToRecord);
       if (result?.error) {
         alert(`⚠️ ${result.error}`);
       }
@@ -111,9 +119,10 @@ export default function CheckinQrPage() {
     setIsBatchProcessing(true);
     let successCount = 0;
     let errorCount = 0;
+    const dateToRecord = filterMode === 'day' ? selectedDate : new Date().toLocaleDateString('en-CA');
     for (const sid of selectedStudentIds) {
       try {
-        const result = await recordCheckIn(sid, selectedDate);
+        const result = await recordCheckIn(sid, dateToRecord);
         if (result?.error) {
           errorCount++;
         } else {
@@ -323,15 +332,32 @@ export default function CheckinQrPage() {
                    <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
-              
+              <select
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value as "day" | "month")}
+                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="day">Por Dia</option>
+                <option value="month">Por Mês</option>
+              </select>
+
               <div className="relative">
                 <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input 
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="pl-8 flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
+                {filterMode === "day" ? (
+                  <input 
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="pl-8 flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                ) : (
+                  <input 
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="pl-8 flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                )}
               </div>
               <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0 px-3 py-1 text-sm font-semibold whitespace-nowrap">
                 {feed.length} Total

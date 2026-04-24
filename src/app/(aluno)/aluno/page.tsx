@@ -28,7 +28,7 @@ export default function AlunoDashboard() {
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [showQrScanner, setShowQrScanner] = useState(false);
-  const [scannerStatus, setScannerStatus] = useState<'scanning' | 'processing' | 'success' | 'error'>('scanning');
+  const [scannerStatus, setScannerStatus] = useState<'scanning' | 'processing' | 'success' | 'already' | 'error'>('scanning');
   const [scannerMsg, setScannerMsg] = useState('');
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'qr-reader-container';
@@ -36,7 +36,6 @@ export default function AlunoDashboard() {
   // Inicializar/destruir o scanner QR
   useEffect(() => {
     if (!showQrScanner) {
-      // Limpar scanner ao fechar
       if (scannerRef.current) {
         try { scannerRef.current.stop(); } catch (e) {}
         scannerRef.current = null;
@@ -44,7 +43,6 @@ export default function AlunoDashboard() {
       return;
     }
 
-    // Esperar o DOM montar o container
     const timer = setTimeout(async () => {
       try {
         const { Html5Qrcode } = await import('html5-qrcode');
@@ -55,33 +53,50 @@ export default function AlunoDashboard() {
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           async (decodedText: string) => {
-            // QR lido! Parar scanner e processar
             try { await scanner.stop(); } catch (e) {}
             setScannerStatus('processing');
 
-            // Verificar se a URL do QR contém /checkin/
+            // Verificar se é um QR válido da academia
             if (decodedText.includes('/checkin/')) {
-              // Navegar para a página de checkin
-              window.location.href = decodedText;
+              // Extrair academyId e verificar
+              const urlParts = decodedText.split('/checkin/');
+              const scannedAcademyId = urlParts[urlParts.length - 1]?.replace(/\/$/, '');
+
+              if (scannedAcademyId && scannedAcademyId === academy?.id) {
+                // Fazer check-in direto sem navegar
+                try {
+                  const result = await recordCheckIn(student.id);
+                  if (result?.error) {
+                    if (result.error.includes('já registrou')) {
+                      setScannerStatus('already');
+                      setScannerMsg('Você já fez check-in hoje! 💪');
+                    } else {
+                      setScannerStatus('error');
+                      setScannerMsg(result.error);
+                    }
+                  } else {
+                    setScannerStatus('success');
+                    setScannerMsg('Presença registrada! Bom treino! 🥋');
+                  }
+                } catch (err: any) {
+                  setScannerStatus('error');
+                  setScannerMsg(err.message || 'Erro ao registrar presença.');
+                }
+              } else {
+                setScannerStatus('error');
+                setScannerMsg('Este QR Code é de outra academia.');
+              }
             } else {
               setScannerStatus('error');
               setScannerMsg('QR Code inválido. Use o QR Code da academia.');
-              setTimeout(() => {
-                setScannerStatus('scanning');
-                setScannerMsg('');
-                // Reiniciar scanner
-                try {
-                  scanner.start(
-                    { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    () => {},
-                    () => {}
-                  );
-                } catch (e) {}
-              }, 2500);
             }
+
+            // Fechar automaticamente após 3 segundos
+            setTimeout(() => {
+              closeScanner();
+            }, 3000);
           },
-          () => {} // erro de scan silencioso (normal enquanto aponta)
+          () => {}
         );
       } catch (err: any) {
         console.error('Erro ao iniciar câmera:', err);
@@ -251,7 +266,7 @@ export default function AlunoDashboard() {
               </button>
             </div>
 
-            {/* Área da câmera */}
+            {/* Área da câmera / feedback */}
             <div className="relative bg-black aspect-square">
               {scannerStatus === 'scanning' && (
                 <div id={scannerContainerId} className="w-full h-full" />
@@ -262,18 +277,41 @@ export default function AlunoDashboard() {
                   <p className="text-white font-semibold">Registrando presença...</p>
                 </div>
               )}
+              {scannerStatus === 'success' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-emerald-900/90 p-6">
+                  <div className="h-20 w-20 rounded-full bg-emerald-500/30 flex items-center justify-center animate-bounce">
+                    <CheckCircle2 className="h-12 w-12 text-emerald-400" />
+                  </div>
+                  <p className="text-white font-black text-xl">Check-in realizado!</p>
+                  <p className="text-emerald-300 text-sm">{scannerMsg}</p>
+                  <p className="text-white/40 text-xs">Fechando automaticamente...</p>
+                </div>
+              )}
+              {scannerStatus === 'already' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-amber-900/90 p-6">
+                  <div className="h-20 w-20 rounded-full bg-amber-500/30 flex items-center justify-center">
+                    <AlertTriangle className="h-12 w-12 text-amber-400" />
+                  </div>
+                  <p className="text-white font-bold text-xl">Já registrado hoje!</p>
+                  <p className="text-amber-300 text-sm">{scannerMsg}</p>
+                  <p className="text-white/40 text-xs">Fechando automaticamente...</p>
+                </div>
+              )}
               {scannerStatus === 'error' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-6">
                   <AlertTriangle className="h-12 w-12 text-amber-400" />
                   <p className="text-white font-semibold text-center text-sm">{scannerMsg}</p>
+                  <p className="text-white/40 text-xs">Fechando automaticamente...</p>
                 </div>
               )}
             </div>
 
             {/* Instrução */}
-            <div className="px-5 py-4 text-center">
-              <p className="text-sm text-muted-foreground">Aponte a câmera para o <strong>QR Code da academia</strong></p>
-            </div>
+            {scannerStatus === 'scanning' && (
+              <div className="px-5 py-4 text-center">
+                <p className="text-sm text-muted-foreground">Aponte a câmera para o <strong>QR Code da academia</strong></p>
+              </div>
+            )}
           </div>
         </div>
       )}
