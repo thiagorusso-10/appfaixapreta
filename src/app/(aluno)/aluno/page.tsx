@@ -33,6 +33,11 @@ export default function AlunoDashboard() {
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'qr-reader-container';
 
+  // Encontra o perfil do aluno no array consumido em tempo real mapeando pelo email
+  const student = user?.primaryEmailAddress?.emailAddress 
+    ? students.find(s => s.email === user.primaryEmailAddress!.emailAddress) || students[0]
+    : students.length > 0 ? students[0] : null;
+
   // Inicializar/destruir o scanner QR
   useEffect(() => {
     if (!showQrScanner) {
@@ -64,6 +69,11 @@ export default function AlunoDashboard() {
 
               if (scannedAcademyId && scannedAcademyId === academy?.id) {
                 // Fazer check-in direto sem navegar
+                if (!student) {
+                  setScannerStatus('error');
+                  setScannerMsg('Aluno não encontrado para check-in.');
+                  return;
+                }
                 try {
                   const result = await recordCheckIn(student.id);
                   if (result?.error) {
@@ -121,11 +131,6 @@ export default function AlunoDashboard() {
   };
 
   if (!academy || isLoading) return null;
-
-  // Encontra o perfil do aluno no array consumido em tempo real mapeando pelo email
-  const student = user?.primaryEmailAddress?.emailAddress 
-    ? students.find(s => s.email === user.primaryEmailAddress!.emailAddress) || students[0]
-    : students.length > 0 ? students[0] : null;
   if (!student) return <div className="p-4">Aluno não encontrado no banco de dados.</div>;
 
   const myPayments = payments.filter(p => p.studentId === student.id);
