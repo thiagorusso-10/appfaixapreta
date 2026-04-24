@@ -123,7 +123,7 @@ export default function CheckinQrPage() {
             <CardContent className="pt-6 pb-6 flex flex-col items-center">
               <div className="p-4 bg-white rounded-2xl shadow-sm border border-border mb-4">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://app.faixapreta.com/checkin/${academy.id}`} 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${typeof window !== 'undefined' ? window.location.origin : ''}/checkin/${academy.id}`} 
                   alt="QR Code Check-in" 
                   className="h-44 w-44 object-contain"
                 />

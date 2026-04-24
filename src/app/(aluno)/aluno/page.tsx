@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { CheckCircle2, AlertTriangle, PlayCircle, MapPin, Trophy, Flame, Target, Swords, Copy } from "lucide-react";
+import { CheckCircle2, AlertTriangle, PlayCircle, MapPin, Trophy, Flame, Target, Swords, Copy, QrCode } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useState } from "react";
 import { StudentTechnique } from "@/lib/types";
@@ -153,20 +153,11 @@ export default function AlunoDashboard() {
       <Button 
          size="lg" 
          className={`w-full h-16 text-lg font-bold rounded-2xl shadow-lg transition-all duration-300 shadow-primary/25 bg-linear-to-r from-primary to-primary/80 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.01]`}
-         onClick={async () => {
-           try {
-             const result = await recordCheckIn(student.id);
-             if (result?.error) {
-               alert(`⚠️ ${result.error}`);
-               return;
-             }
-             alert("✅ Check-in realizado com sucesso! Bom treino! 🥋");
-           } catch (err: any) {
-             alert(err.message);
-           }
+         onClick={() => {
+           window.location.href = `/checkin/${academy?.id}`;
          }}
       >
-         <MapPin className="mr-2 h-6 w-6" /> 
+         <QrCode className="mr-2 h-6 w-6" /> 
          Fazer Check-in no Treino
       </Button>
 

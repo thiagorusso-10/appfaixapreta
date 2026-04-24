@@ -311,14 +311,12 @@ export function useApi(academyId?: string) {
     if (students.length === 0) {
       console.warn('generateMonthlyInvoices: lista de students vazia, tentando recarregar...');
       await fetchData();
-      // Precisamos usar o estado atualizado — mas pelo closure, students pode estar stale
-      // Vamos buscar direto do banco
     }
 
     // Buscar alunos diretamente do banco para evitar problema de closure/state stale
     const { data: freshStudents, error: studentsError } = await supabase
       .from('students')
-      .select('id, name, status, is_exempt')
+      .select('id, name, status, is_exempt, plan_id')
       .eq('academy_id', academyId);
 
     if (studentsError) {
@@ -330,6 +328,22 @@ export function useApi(academyId?: string) {
       console.warn('generateMonthlyInvoices: nenhum aluno encontrado para esta academia');
       return 0;
     }
+
+    // Buscar todos os planos da academia para pegar os preços reais
+    const { data: freshPlans, error: plansError } = await supabase
+      .from('plans')
+      .select('id, price')
+      .eq('academy_id', academyId);
+
+    if (plansError) {
+      console.error('generateMonthlyInvoices: erro ao buscar planos:', plansError);
+    }
+
+    // Montar mapa de preço por plano (id -> price)
+    const planPriceMap: Record<string, number> = {};
+    (freshPlans || []).forEach((p: any) => {
+      planPriceMap[p.id] = p.price;
+    });
 
     // Achar início e fim do mês
     const startObj = new Date(year, monthIndex, 1);
@@ -360,10 +374,12 @@ export function useApi(academyId?: string) {
       .map((s: any) => {
         const dueDate = new Date(year, monthIndex, 10);
         const isLate = dueDate.getTime() < new Date().setHours(0,0,0,0);
+        // Usar o preço do plano do aluno, ou o defaultAmount se não tiver plano
+        const studentAmount = (s.plan_id && planPriceMap[s.plan_id]) ? planPriceMap[s.plan_id] : defaultAmount;
         return {
           academy_id: academyId,
           student_id: s.id,
-          amount: defaultAmount,
+          amount: studentAmount,
           status: isLate ? 'ATRASADO' : 'PENDENTE',
           due_date: dueDate.toISOString().split('T')[0],
           description: `Mensalidade - ${monthIndex + 1}/${year}`
