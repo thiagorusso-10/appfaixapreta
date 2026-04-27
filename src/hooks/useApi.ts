@@ -428,7 +428,7 @@ export function useApi(academyId?: string) {
     const { error } = await supabase.from('checkins').insert([{
       academy_id: academyId,
       student_id: studentId,
-      created_at: dateStr ? targetDate.toISOString() : undefined
+      created_at: targetDate.toISOString()
     }]);
     if (!error) {
       // Incrementa o contador de aulas do aluno (+1 presença)

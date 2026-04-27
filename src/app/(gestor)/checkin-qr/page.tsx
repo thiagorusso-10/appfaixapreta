@@ -43,6 +43,7 @@ export default function CheckinQrPage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toLocaleDateString('en-CA').slice(0, 7));
   const [feed, setFeed] = useState<CheckInEntry[]>([]);
+  const [studentHistoryModal, setStudentHistoryModal] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -383,7 +384,12 @@ export default function CheckinQrPage() {
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
               {feed.map((entry, idx) => (
-                <Card key={entry.id} className={`border-0 overflow-hidden relative transition-all animate-in fade-in slide-in-from-right-4 duration-300 ${entry.warning ? 'bg-amber-500/5 ring-1 ring-amber-500/30' : 'glass-card'}`} style={{ animationDelay: `${idx * 50}ms` }}>
+                <Card 
+                  key={entry.id} 
+                  onClick={() => setStudentHistoryModal(students.find(s => s.id === entry.studentId) || null)}
+                  className={`border-0 overflow-hidden relative transition-all cursor-pointer hover:opacity-80 animate-in fade-in slide-in-from-right-4 duration-300 ${entry.warning ? 'bg-amber-500/5 ring-1 ring-amber-500/30' : 'glass-card'}`} 
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
                   <div className={`absolute top-0 left-0 w-1.5 h-full ${entry.warning ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
@@ -457,6 +463,63 @@ export default function CheckinQrPage() {
           )}
         </div>
       </div>
+      
+      {/* Modal Histórico Individual */}
+      {studentHistoryModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-md bg-card shadow-2xl overflow-hidden border border-border/50 rounded-2xl">
+            <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-3">
+                {studentHistoryModal.avatarUrl ? (
+                  <img src={studentHistoryModal.avatarUrl} alt="" className="h-10 w-10 rounded-full border-2 border-border object-cover" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    {studentHistoryModal.name.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-bold text-foreground leading-tight">{studentHistoryModal.name}</h3>
+                  <p className="text-xs text-muted-foreground">Histórico Completo de Presenças</p>
+                </div>
+              </div>
+              <button onClick={() => setStudentHistoryModal(null)} className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              {checkins
+                .filter(c => c.studentId === studentHistoryModal.id)
+                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .map((chk, i) => {
+                  const d = new Date(chk.timestamp);
+                  return (
+                    <div key={chk.id} className="flex items-center justify-between py-3 border-b border-border/30 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{d.toLocaleDateString('pt-BR')}</p>
+                          <p className="text-xs text-muted-foreground">{d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold text-emerald-600 border-emerald-200 bg-emerald-50">
+                        Presente
+                      </Badge>
+                    </div>
+                  );
+                })}
+              {checkins.filter(c => c.studentId === studentHistoryModal.id).length === 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p className="text-sm">Nenhum check-in registrado para este aluno.</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 }
