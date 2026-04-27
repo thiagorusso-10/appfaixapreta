@@ -5,7 +5,7 @@ import { useApi } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { QrCode, Printer, UserCheck, AlertTriangle, CheckCircle2, Clock, Users, CalendarDays, Info, Trash2, CheckSquare } from "lucide-react";
+import { QrCode, Printer, UserCheck, AlertTriangle, CheckCircle2, Clock, Users, CalendarDays, Info, Trash2, CheckSquare, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 const BELT_COLORS: Record<string, string> = {
