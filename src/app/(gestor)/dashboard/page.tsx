@@ -113,7 +113,6 @@ export default function DashboardPage() {
       monthNum: d.getMonth(),
       year: d.getFullYear(),
       receita: 0,
-      meta: 5000 + (i * 200), // Meta simulada subindo 200/mes
       isCurrent
     };
   });
@@ -302,7 +301,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-xl font-black">Evolução do Faturamento</CardTitle>
-                <CardDescription className="font-medium mt-1">Crescimento financeiro contábil recebido vs Metas estipuladas</CardDescription>
+                <CardDescription className="font-medium mt-1">Crescimento financeiro contábil recebido</CardDescription>
               </div>
               <Badge variant="secondary" className="font-bold bg-muted text-foreground/80 rounded-lg px-3 py-1">6 Meses</Badge>
             </div>
@@ -314,10 +313,6 @@ export default function DashboardPage() {
                   <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorMeta" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#94a3b8" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
@@ -335,18 +330,6 @@ export default function DashboardPage() {
                    tickFormatter={(value) => `R$${value/1000}k`}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 2, strokeDasharray: '4 4' }} />
-                
-                <Area 
-                  type="monotone" 
-                  dataKey="meta" 
-                  stroke="#94a3b8" 
-                  strokeWidth={2} 
-                  strokeDasharray="4 4" 
-                  fillOpacity={1} 
-                  fill="url(#colorMeta)" 
-                  name="Meta Projetada" 
-                  activeDot={false}
-                />
                 <Area 
                   type="monotone" 
                   dataKey="receita" 
