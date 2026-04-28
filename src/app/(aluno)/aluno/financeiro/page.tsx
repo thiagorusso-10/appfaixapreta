@@ -130,7 +130,7 @@ export default function FinanceiroAlunoPage() {
                  <div className="flex justify-between items-start mb-4">
                     <div className="space-y-1">
                        <span className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Vencimento</span>
-                       <p className="font-bold text-foreground">{new Date(payment.dueDate).toLocaleDateString('pt-BR')}</p>
+                       <p className="font-bold text-foreground">{new Date(payment.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
                     </div>
                     {payment.status === 'ATRASADO' && (
                        <Badge variant="destructive" className="flex gap-1 items-center text-[10px] uppercase font-bold tracking-wider">

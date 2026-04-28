@@ -112,7 +112,7 @@ export default function FinanceiroAlunoPage() {
                      )}
                    </div>
                    <div className="text-sm text-muted-foreground space-y-0.5">
-                     <p>Vencimento: {new Date(payment.dueDate).toLocaleDateString('pt-BR')}</p>
+                     <p>Vencimento: {new Date(payment.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
                      <p className="text-xs opacity-70 italic">{payment.description}</p>
                    </div>
                  </div>
