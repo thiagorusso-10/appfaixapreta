@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/lib/supabase/client';
-import { Student, Payment, CheckIn, ClassSession, Plan, BeltRank, PaymentStatus, PaymentMethod, Turma, StudentTechnique } from '@/lib/types';
+import { Student, Payment, CheckIn, ClassSession, Plan, BeltRank, PaymentStatus, PaymentMethod, Turma, StudentTechnique, Expense } from '@/lib/types';
 import { useAuth } from '@clerk/nextjs';
 
 export function useApi(academyId?: string) {
@@ -15,6 +15,7 @@ export function useApi(academyId?: string) {
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [lessonPlans, setLessonPlans] = useState<any[]>([]);
   const [studentTechniques, setStudentTechniques] = useState<StudentTechnique[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchData = useCallback(async () => {
     if (!academyId || !isLoaded) {
@@ -35,6 +36,7 @@ export function useApi(academyId?: string) {
         { data: turmasData },
         { data: lessonPlansData },
         { data: studentTechniquesData },
+        { data: expensesData },
       ] = await Promise.all([
         supabase.from('students').select('*').eq('academy_id', academyId),
         supabase.from('payments').select('*').eq('academy_id', academyId),
@@ -43,7 +45,8 @@ export function useApi(academyId?: string) {
         supabase.from('plans').select('*').eq('academy_id', academyId),
         supabase.from('turmas').select('*').eq('academy_id', academyId),
         supabase.from('lesson_plans').select('*').eq('academy_id', academyId),
-        supabase.from('student_techniques').select('*').eq('academy_id', academyId)
+        supabase.from('student_techniques').select('*').eq('academy_id', academyId),
+        supabase.from('expenses').select('*').eq('academy_id', academyId)
       ]);
 
       const studentsData = studentsResult.data;
@@ -166,6 +169,17 @@ export function useApi(academyId?: string) {
       setTurmas(mappedTurmas);
       setLessonPlans(mappedLessonPlans);
       setStudentTechniques(mappedTechniques);
+
+      const mappedExpenses: Expense[] = (expensesData || []).map((e: any) => ({
+        id: e.id,
+        academyId: e.academy_id,
+        description: e.description,
+        amount: Number(e.amount),
+        dueDate: e.due_date,
+        status: e.status,
+        category: e.category,
+      }));
+      setExpenses(mappedExpenses);
     } catch (error) {
       console.error("Erro ao buscar dados do Supabase:", error);
     } finally {
@@ -180,6 +194,40 @@ export function useApi(academyId?: string) {
   // ==========================================
   // Mutações (Escrevendo no Supabase)
   // ==========================================
+
+  // -- EXPENSES --
+  const createExpense = async (expenseData: Partial<Expense>) => {
+    if (!academyId) return { error: "Sem academyId" };
+    const { error } = await supabase.from('expenses').insert([{
+      academy_id: academyId,
+      description: expenseData.description,
+      amount: expenseData.amount,
+      due_date: expenseData.dueDate,
+      status: expenseData.status || 'PENDENTE',
+      category: expenseData.category || 'FIXA'
+    }]);
+    if (!error) await fetchData();
+    return { error };
+  };
+
+  const updateExpense = async (expenseId: string, updates: Partial<Expense>) => {
+    const payload: any = {};
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.amount !== undefined) payload.amount = updates.amount;
+    if (updates.dueDate !== undefined) payload.due_date = updates.dueDate;
+    if (updates.status !== undefined) payload.status = updates.status;
+    if (updates.category !== undefined) payload.category = updates.category;
+
+    const { error } = await supabase.from('expenses').update(payload).eq('id', expenseId);
+    if (!error) await fetchData();
+    return { error };
+  };
+
+  const deleteExpense = async (expenseId: string) => {
+    const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+    if (!error) await fetchData();
+    return { error };
+  };
 
   const createStudent = async (studentData: Partial<Student>) => {
     if (!academyId) return { error: "Sem academyId" };
@@ -794,5 +842,9 @@ export function useApi(academyId?: string) {
     deleteStudentTechnique,
     updateStudentTechnique,
     updateMultipleStudentTechniques,
+    expenses,
+    createExpense,
+    updateExpense,
+    deleteExpense,
   };
 }

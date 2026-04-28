@@ -98,6 +98,16 @@ export interface Payment {
   description?: string;
 }
 
+export interface Expense {
+  id: string;
+  academyId: string;
+  description: string;
+  amount: number;
+  dueDate: string; // ISO String
+  status: PaymentStatus;
+  category: "FIXA" | "VARIÁVEL";
+}
+
 export interface Technique {
   id: string;
   academyId: string;

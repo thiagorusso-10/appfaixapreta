@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
 
   // Injeta a API real que se conecta via Clerk JWT com o Supabase RLS
-  const { students, payments, checkins, isLoading } = useApi(academy?.id);
+  const { students, payments, checkins, expenses, isLoading } = useApi(academy?.id);
 
   useEffect(() => {
     setMounted(true);
@@ -70,12 +70,21 @@ export default function DashboardPage() {
   const currentYear = new Date().getFullYear();
   
   const paymentsThisMonth = payments.filter(p => {
-    const d = new Date(p.dueDate);
+    const d = new Date(p.dueDate + 'T12:00:00');
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const expensesThisMonth = expenses.filter(e => {
+    const d = new Date(e.dueDate + 'T12:00:00');
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
   const expectedRevenueThisMonth = paymentsThisMonth.reduce((acc, p) => acc + p.amount, 0);
   const collectedRevenueThisMonth = paymentsThisMonth.filter(p => p.status === "PAGO").reduce((acc, p) => acc + p.amount, 0);
+
+  const collectedExpensesThisMonth = expensesThisMonth.filter(e => e.status === "PAGO").reduce((acc, e) => acc + e.amount, 0);
+  const lucroLiquidoThisMonth = collectedRevenueThisMonth - collectedExpensesThisMonth;
+
   const delayedPayments = payments.filter(p => p.status === "ATRASADO");
   const defaultRateAmount = delayedPayments.reduce((acc, p) => acc + p.amount, 0);
   
@@ -113,16 +122,30 @@ export default function DashboardPage() {
       monthNum: d.getMonth(),
       year: d.getFullYear(),
       receita: 0,
+      despesa: 0,
+      lucro: 0,
       isCurrent
     };
   });
 
   payments.forEach(p => {
     if (p.status === "PAGO" && p.dueDate) {
-      const d = new Date(p.dueDate);
+      const d = new Date(p.dueDate + 'T12:00:00');
       const slot = last6MonthsData.find(m => m.monthNum === d.getMonth() && m.year === d.getFullYear());
       if (slot) slot.receita += p.amount;
     }
+  });
+
+  expenses.forEach(e => {
+    if (e.status === "PAGO" && e.dueDate) {
+      const d = new Date(e.dueDate + 'T12:00:00');
+      const slot = last6MonthsData.find(m => m.monthNum === d.getMonth() && m.year === d.getFullYear());
+      if (slot) slot.despesa += e.amount;
+    }
+  });
+
+  last6MonthsData.forEach(slot => {
+    slot.lucro = slot.receita - slot.despesa;
   });
 
   const formatCurrency = (value: number) => 
@@ -214,23 +237,23 @@ export default function DashboardPage() {
       {/* KPI Cards (Vidro/Glow) */}
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         
-        {/* KPI: Caixa Real do Mês */}
+        {/* KPI: Lucro Liquido do Mês */}
         <Card className="glass-card border-0 overflow-hidden relative group hover:-translate-y-1 transition-all duration-300 ring-1 ring-border/50 hover:ring-primary/50 hover:shadow-xl hover:shadow-primary/10">
           <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-emerald-400 to-emerald-600" />
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-            <CardTitle className="text-sm font-bold text-muted-foreground tracking-wide uppercase">Caixa Recolhido</CardTitle>
+            <CardTitle className="text-sm font-bold text-muted-foreground tracking-wide uppercase">Lucro Líquido</CardTitle>
             <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
               <DollarSign className="h-5 w-5 text-emerald-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-foreground tracking-tight">{formatCurrency(collectedRevenueThisMonth)}</div>
+            <div className="text-3xl font-black text-foreground tracking-tight">{formatCurrency(lucroLiquidoThisMonth)}</div>
             <div className="flex items-center gap-2 mt-2">
-               <Progress value={(collectedRevenueThisMonth / (expectedRevenueThisMonth || 1)) * 100} className="h-1.5 flex-1 bg-muted" />
-               <span className="text-[10px] font-bold text-muted-foreground w-12 text-right">{((collectedRevenueThisMonth / (expectedRevenueThisMonth || 1)) * 100).toFixed(0)}% ref.</span>
+               <Progress value={(lucroLiquidoThisMonth / (expectedRevenueThisMonth || 1)) * 100} className="h-1.5 flex-1 bg-muted" />
+               <span className="text-[10px] font-bold text-muted-foreground w-12 text-right">{((lucroLiquidoThisMonth / (expectedRevenueThisMonth || 1)) * 100).toFixed(0)}% ref.</span>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wide font-medium">De {formatCurrency(expectedRevenueThisMonth)} previstos p/ mês</p>
+            <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wide font-medium">De {formatCurrency(expectedRevenueThisMonth)} faturados no mês</p>
           </CardContent>
         </Card>
 
@@ -314,6 +337,14 @@ export default function DashboardPage() {
                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                   </linearGradient>
+                  <linearGradient id="colorDespesa" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
                 <XAxis 
@@ -337,8 +368,28 @@ export default function DashboardPage() {
                   strokeWidth={3} 
                   fillOpacity={1} 
                   fill="url(#colorReceita)" 
-                  name="Receita Realizada" 
+                  name="Entradas" 
                   activeDot={{ r: 6, strokeWidth: 0, fill: '#16a34a', className: "animate-pulse" }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="despesa" 
+                  stroke="#ef4444" 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill="url(#colorDespesa)" 
+                  name="Saídas" 
+                  activeDot={false}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="lucro" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3} 
+                  fillOpacity={1} 
+                  fill="url(#colorLucro)" 
+                  name="Lucro Real" 
+                  activeDot={{ r: 5, strokeWidth: 0, fill: '#2563eb' }}
                 />
               </AreaChart>
             </ResponsiveContainer>

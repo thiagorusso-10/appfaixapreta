@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { FileDown } from "lucide-react";
 
@@ -38,6 +38,10 @@ export default function FinanceiroPage() {
     students, 
     payments, 
     turmas,
+    expenses,
+    createExpense,
+    updateExpense,
+    deleteExpense,
     isLoading,
     createPayment,
     updatePaymentStatus,
@@ -47,6 +51,13 @@ export default function FinanceiroPage() {
 
   // Modal State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [expenseFormData, setExpenseFormData] = useState({
+    description: "",
+    amount: 0,
+    dueDate: new Date().toISOString().split("T")[0],
+    category: "FIXA" as any,
+  });
   const [formData, setFormData] = useState({
     studentId: "",
     amount: 150,
@@ -77,6 +88,18 @@ export default function FinanceiroPage() {
     const docYear = parseInt(y, 10);
     return docMonth === selectedMonth && docYear === selectedYear;
   });
+
+  // Filtragem Despesas
+  const competencyExpenses = expenses.filter(e => {
+    const isoDateStr = e.dueDate.split("T")[0]; // YYYY-MM-DD
+    const [y, m, d] = isoDateStr.split("-");
+    const docMonth = parseInt(m, 10) - 1; 
+    const docYear = parseInt(y, 10);
+    return docMonth === selectedMonth && docYear === selectedYear;
+  });
+
+  const totalSaidaRealizada = competencyExpenses.filter(e => e.status === "PAGO").reduce((s, e) => s + e.amount, 0);
+  const totalSaidaPendente = competencyExpenses.filter(e => e.status === "PENDENTE" || e.status === "ATRASADO").reduce((s, e) => s + e.amount, 0);
 
   // KPIs dinâmicos da competência filtrada
   const totalReceita = competencyPayments.filter(p => p.status === "PAGO").reduce((s, p) => s + p.amount, 0);
@@ -339,6 +362,12 @@ export default function FinanceiroPage() {
            </Button>
         </div>
       </div>
+      
+      <Tabs defaultValue="entradas" className="w-full">
+        <TabsList className="mb-6 grid w-full sm:w-[400px] grid-cols-2">
+          <TabsTrigger value="entradas">Entradas (Receitas)</TabsTrigger>
+          <TabsTrigger value="saidas">Saídas (Despesas)</TabsTrigger>
+        </TabsList>
 
       {/* Modal Lançar Cobrança */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -387,6 +416,7 @@ export default function FinanceiroPage() {
           <Button className="w-full rounded-xl" onClick={handleSavePayment}>Salvar Lançamento</Button>
         </DialogContent>
       </Dialog>
+      <TabsContent value="entradas" className="space-y-6 mt-6">
 
       {/* KPI Cards (Respects Competency Isolation) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 pt-2">
@@ -624,6 +654,154 @@ export default function FinanceiroPage() {
           </table>
         </div>
       </Card>
+      </TabsContent>
+
+      <TabsContent value="saidas" className="space-y-6 mt-6">
+        <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Registrar Despesa</DialogTitle>
+              <DialogDescription>
+                Adicione uma nova conta ou despesa recorrente da academia.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                 <Label htmlFor="exp-desc">Descrição</Label>
+                 <Input id="exp-desc" value={expenseFormData.description} onChange={e => setExpenseFormData({ ...expenseFormData, description: e.target.value })} placeholder="Ex: Conta de Luz" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="exp-val">Valor (R$)</Label>
+                  <Input id="exp-val" type="number" step="0.01" value={expenseFormData.amount || ''} onChange={e => setExpenseFormData({ ...expenseFormData, amount: Number(e.target.value) })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="exp-cat">Categoria</Label>
+                  <select id="exp-cat" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={expenseFormData.category} onChange={e => setExpenseFormData({ ...expenseFormData, category: e.target.value as any })}>
+                    <option value="FIXA">Fixa</option>
+                    <option value="VARIÁVEL">Variável</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="exp-due">Vencimento</Label>
+                <Input id="exp-due" type="date" value={expenseFormData.dueDate} onChange={e => setExpenseFormData({ ...expenseFormData, dueDate: e.target.value })} />
+              </div>
+            </div>
+            <Button className="w-full rounded-xl" onClick={async () => {
+               if(!expenseFormData.description || !expenseFormData.amount) return alert('Preencha os dados!');
+               await createExpense(expenseFormData);
+               setIsExpenseDialogOpen(false);
+               setExpenseFormData({ description: '', amount: 0, dueDate: new Date().toISOString().split('T')[0], category: 'FIXA' });
+            }}>Salvar Despesa</Button>
+          </DialogContent>
+        </Dialog>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold">Saídas de {MONTHS[selectedMonth]} {selectedYear}</h3>
+            <p className="text-sm text-muted-foreground">Registre despesas e contas da academia.</p>
+          </div>
+          <Button onClick={() => setIsExpenseDialogOpen(true)} className="rounded-xl shadow-lg shadow-primary/20 bg-primary text-primary-foreground font-semibold">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Despesa
+          </Button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pt-2">
+          <Card className="glass-card kpi-glow-red border-0 overflow-hidden relative group">
+             <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-red-400 to-red-600" />
+             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+               <CardTitle className="text-sm font-medium text-muted-foreground font-mono uppercase tracking-wider">Total de Despesas</CardTitle>
+               <div className="h-9 w-9 rounded-xl bg-red-500/10 flex items-center justify-center">
+                 <TrendingDown className="h-4 w-4 text-red-500" />
+               </div>
+             </CardHeader>
+             <CardContent>
+               <div className="text-2xl font-bold text-foreground">{formatCurrency(totalSaidaRealizada + totalSaidaPendente)}</div>
+             </CardContent>
+          </Card>
+          
+          <Card className="glass-card kpi-glow-amber border-0 overflow-hidden relative group">
+             <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-amber-400 to-amber-600" />
+             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+               <CardTitle className="text-sm font-medium text-muted-foreground font-mono uppercase tracking-wider">A Pagar</CardTitle>
+               <div className="h-9 w-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                 <AlertTriangle className="h-4 w-4 text-amber-500" />
+               </div>
+             </CardHeader>
+             <CardContent>
+               <div className="text-2xl font-bold text-foreground">{formatCurrency(totalSaidaPendente)}</div>
+             </CardContent>
+          </Card>
+
+          <Card className="glass-card kpi-glow-green border-0 overflow-hidden relative group">
+             <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-emerald-400 to-emerald-600" />
+             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5">
+               <CardTitle className="text-sm font-medium text-muted-foreground font-mono uppercase tracking-wider">Já Pago (Baixado)</CardTitle>
+               <div className="h-9 w-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+               </div>
+             </CardHeader>
+             <CardContent>
+               <div className="text-2xl font-bold text-foreground">{formatCurrency(totalSaidaRealizada)}</div>
+             </CardContent>
+          </Card>
+        </div>
+
+        <Card className="glass-card border-0 overflow-hidden mt-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs uppercase bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="px-6 py-4 font-bold tracking-wider">Descrição</th>
+                  <th className="px-6 py-4 font-bold tracking-wider">Valor</th>
+                  <th className="px-6 py-4 font-bold tracking-wider">Categoria</th>
+                  <th className="px-6 py-4 font-bold tracking-wider">Vencimento</th>
+                  <th className="px-6 py-4 font-bold tracking-wider">Status</th>
+                  <th className="px-6 py-4 font-bold tracking-wider text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {competencyExpenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                      Nenhuma despesa registrada neste mês.
+                    </td>
+                  </tr>
+                ) : (
+                  competencyExpenses.sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()).map(exp => (
+                    <tr key={exp.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-6 py-4 font-medium text-foreground">{exp.description}</td>
+                      <td className="px-6 py-4 font-bold">{formatCurrency(exp.amount)}</td>
+                      <td className="px-6 py-4"><Badge variant="outline" className="text-[10px]">{exp.category}</Badge></td>
+                      <td className="px-6 py-4 text-muted-foreground">{new Date(exp.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td className="px-6 py-4">
+                        <Badge variant={exp.status === 'PAGO' ? 'default' : exp.status === 'ATRASADO' ? 'destructive' : 'secondary'}
+                          className={exp.status === 'PAGO' ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20' : ''}
+                        >
+                          {exp.status === 'PAGO' ? 'Pago' : exp.status === 'ATRASADO' ? 'Atrasado' : 'Pendente'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
+                        {exp.status !== 'PAGO' && (
+                           <Button variant="ghost" size="sm" onClick={() => updateExpense(exp.id, { status: 'PAGO' })} className="h-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700">
+                             Dar Baixa
+                           </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => deleteExpense(exp.id)} className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }
