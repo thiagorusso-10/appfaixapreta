@@ -5,7 +5,7 @@
       <stop offset="100%" style="stop-color:#3b82f6"/>
     </linearGradient>
   </defs>
-  <rect width="192" height="192" rx="38" fill="url(#bg)"/>
+  <rect width="192" height="192" fill="url(#bg)"/>
   <g transform="translate(96,96)" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
     <!-- Flame icon -->
     <path d="M0,-50 C15,-35 25,-15 25,5 C25,25 15,40 0,50 C-15,40 -25,25 -25,5 C-25,-15 -15,-35 0,-50 Z" fill="white" fill-opacity="0.95" stroke="none"/>
