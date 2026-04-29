@@ -116,53 +116,63 @@ export const PRESET_THEMES: ThemeDefinition[] = [
 // Gera um tema customizado a partir de uma cor hex
 // Usa FUNDOS NEUTROS com a cor apenas em destaques/botões/acentos
 export function generateCustomTheme(hex: string): ThemeDefinition {
+  // Converte HEX para RGB para cálculos
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
+  
+  // Calcula luminância para decidir se o tema base será claro ou escuro
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  const isDark = luminance < 0.5;
+  const isDarkBase = luminance < 0.6; // Se a cor for escura, vamos para um modo "Dark Premium"
 
-  // Mix sutil: gera um off-white levemente tingido pela cor (5% da cor + 95% branco)
-  const tintedWhite = `#${[r, g, b].map(c => Math.min(255, Math.round(245 + c * 0.04)).toString(16).padStart(2, '0')).join('')}`;
-  // Accent suave: 10% cor + 90% branco
-  const softAccent = `#${[r, g, b].map(c => Math.min(255, Math.round(235 + c * 0.08)).toString(16).padStart(2, '0')).join('')}`;
+  // Função helper para misturar cores
+  const mix = (c1: number, c2: number, weight: number) => Math.round(c1 * weight + c2 * (1 - weight));
+  const toHex = (n: number) => Math.min(255, Math.max(0, n)).toString(16).padStart(2, '0');
+  const mixColor = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, weight: number) => 
+    `#${toHex(mix(r1, r2, weight))}${toHex(mix(g1, g2, weight))}${toHex(mix(b1, b2, weight))}`;
+
+  // Se for base escura, fundos são quase pretos com tinta da cor
+  // Se for base clara, fundos são quase brancos com tinta da cor
+  const bgR = isDarkBase ? 10 : 252;
+  const bgG = isDarkBase ? 12 : 253;
+  const bgB = isDarkBase ? 18 : 255;
+
+  const tintedBg = mixColor(r, g, b, bgR, bgG, bgB, 0.05);
+  const tintedCard = mixColor(r, g, b, bgR, bgG, bgB, 0.12);
+  const tintedMuted = mixColor(r, g, b, bgR, bgG, bgB, 0.20);
+  const tintedBorder = mixColor(r, g, b, isDarkBase ? 40 : 220, isDarkBase ? 45 : 225, isDarkBase ? 55 : 235, 0.3);
 
   return {
     id: "custom",
-    name: "Personalizado",
-    description: "Tema com fundos neutros + cor da academia nos destaques.",
+    name: "Cores da Academia",
+    description: "Tema dinâmico que adapta toda a interface às cores da sua marca.",
     icon: "🎨",
-    isDark: false, // Custom via academy primary color is generally light-based in current logic
+    isDark: isDarkBase,
     vars: {
-      // Fundos: neutros brancos/slate — NÃO na cor da academia
-      "--background": "#F8FAFC",
-      "--foreground": "#0F172A",
-      "--card": "#FFFFFF",
-      "--card-foreground": "#0F172A",
-      "--popover": "#FFFFFF",
-      "--popover-foreground": "#0F172A",
-      // Primary: COR DA ACADEMIA — botões, links e destaques
+      "--background": tintedBg,
+      "--foreground": isDarkBase ? "#F1F5F9" : "#0F172A",
+      "--card": tintedCard,
+      "--card-foreground": isDarkBase ? "#F1F5F9" : "#0F172A",
+      "--popover": tintedCard,
+      "--popover-foreground": isDarkBase ? "#F1F5F9" : "#0F172A",
       "--primary": hex,
-      "--primary-foreground": isDark ? "#FFFFFF" : "#0F172A",
-      // Secondary/Muted: neutros com leve tint da cor
-      "--secondary": softAccent,
-      "--secondary-foreground": "#0F172A",
-      "--muted": "#F1F5F9",
-      "--muted-foreground": "#64748B",
-      "--accent": softAccent,
-      "--accent-foreground": "#0F172A",
+      "--primary-foreground": luminance < 0.7 ? "#FFFFFF" : "#0F172A",
+      "--secondary": tintedMuted,
+      "--secondary-foreground": isDarkBase ? "#F1F5F9" : "#0F172A",
+      "--muted": tintedMuted,
+      "--muted-foreground": isDarkBase ? "#94A3B8" : "#64748B",
+      "--accent": hex + "20", // 12% opacity
+      "--accent-foreground": isDarkBase ? "#F1F5F9" : "#0F172A",
       "--destructive": "#EF4444",
       "--destructive-foreground": "#FFFFFF",
-      // Bordas e inputs: neutros
-      "--border": "#E2E8F0",
-      "--input": "#E2E8F0",
+      "--border": tintedBorder,
+      "--input": tintedBorder,
       "--ring": hex,
-      // Sidebar: fundo neutro com accent na cor da academia
-      "--sidebar": tintedWhite,
-      "--sidebar-foreground": "#0F172A",
-      "--sidebar-accent": softAccent,
-      "--sidebar-accent-foreground": "#0F172A",
-      "--sidebar-border": "#E2E8F0",
+      "--sidebar": isDarkBase ? mixColor(r, g, b, 5, 7, 10, 0.1) : mixColor(r, g, b, 255, 255, 255, 0.08),
+      "--sidebar-foreground": isDarkBase ? "#F1F5F9" : "#0F172A",
+      "--sidebar-accent": hex + "15",
+      "--sidebar-accent-foreground": hex,
+      "--sidebar-border": tintedBorder,
     },
   };
 }

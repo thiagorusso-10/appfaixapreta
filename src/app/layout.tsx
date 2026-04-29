@@ -25,8 +25,8 @@ export const metadata: Metadata = {
     type: "website",
   },
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    icon: "/icons/icon-512.png",
+    apple: "/icons/icon-512.png",
   },
 };
 
@@ -35,7 +35,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#3B82F6",
+  themeColor: "#0F172A",
 };
 
 export default function RootLayout({
