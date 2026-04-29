@@ -22,7 +22,7 @@ import { useState, useEffect, useRef } from "react";
 import { StudentTechnique } from "@/lib/types";
 
 export default function AlunoDashboard() {
-  const { academy } = useAcademy();
+  const { academy, activeTheme } = useAcademy();
   const { user } = useUser();
   const { students, payments, checkins, classes, turmas, plans, studentTechniques, recordCheckIn, isLoading } = useApi(academy?.id);
   const [selectedTech, setSelectedTech] = useState<StudentTechnique | null>(null);
@@ -206,14 +206,24 @@ export default function AlunoDashboard() {
     'MARROM': '#92400E',
     'PRETA': '#1F2937',
   };
+
+  const getVisibleBeltColor = (beltName?: string) => {
+    const rank = beltName?.toUpperCase() || 'BRANCA';
+    const color = BELT_COLORS[rank] || '#3B82F6';
+    if (!activeTheme.isDark && rank === 'BRANCA') return '#64748B'; 
+    return color;
+  };
+
   const myBeltColor = BELT_COLORS[student.beltRank?.toUpperCase()] || '#3B82F6';
+  const myVisibleColor = getVisibleBeltColor(student.beltRank);
 
   const BELT_ORDER = ['BRANCA', 'CINZA', 'AZUL', 'AMARELA', 'LARANJA', 'VERDE', 'ROXA', 'MARROM', 'PRETA'];
   const currentBeltIndex = BELT_ORDER.indexOf(student.beltRank?.toUpperCase() || 'BRANCA');
   const nextBeltRank = currentBeltIndex !== -1 && currentBeltIndex < BELT_ORDER.length - 1 
     ? BELT_ORDER[currentBeltIndex + 1] 
     : student.beltRank;
-  const nextBeltColor = BELT_COLORS[nextBeltRank] || '#3B82F6';
+  const nextBeltColor = BELT_COLORS[nextBeltRank?.toUpperCase() || ''] || '#3B82F6';
+  const nextVisibleColor = getVisibleBeltColor(nextBeltRank);
 
   return (
     <div className="space-y-6 animate-slide-up pb-8 max-w-lg mx-auto">
@@ -433,9 +443,9 @@ export default function AlunoDashboard() {
               <div className="flex justify-between text-sm font-black">
                  <span className="text-foreground/70">Treinos Concluídos</span>
                  <span>
-                    <span style={{ color: myBeltColor }}>{classesAttended}</span>
+                    <span style={{ color: myVisibleColor }}>{classesAttended}</span>
                     <span className="text-muted-foreground mx-1">/</span>
-                    <span style={{ color: nextBeltColor }}>{classesTarget}</span>
+                    <span style={{ color: nextVisibleColor }}>{classesTarget}</span>
                  </span>
               </div>
               <div className="relative h-4 w-full bg-muted/50 rounded-full overflow-hidden shadow-inner border border-border/40">

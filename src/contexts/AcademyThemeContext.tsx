@@ -21,14 +21,14 @@ const AcademyThemeContext = createContext<AcademyThemeContextType>({
   setAcademyId: () => {},
   updateAcademy: async () => {},
   saveAcademyToDb: async () => false,
-  activeTheme: PRESET_THEMES[0],
+  activeTheme: PRESET_THEMES[1],
   applyTheme: () => {},
   isSaving: false,
 });
 
 export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [academy, setAcademy] = useState<Academy | null>(null);
-  const [activeTheme, setActiveTheme] = useState<ThemeDefinition>(PRESET_THEMES[0]);
+  const [activeTheme, setActiveTheme] = useState<ThemeDefinition>(PRESET_THEMES.find(t => t.id === "midnight") || PRESET_THEMES[0]);
   const [isSaving, setIsSaving] = useState(false);
 
   const supabase = useSupabase();
