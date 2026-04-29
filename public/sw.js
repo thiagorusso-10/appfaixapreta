@@ -1,5 +1,5 @@
 // Service Worker — Faixa Preta PWA
-const CACHE_NAME = 'faixa-preta-v2';
+const CACHE_NAME = 'faixa-preta-v3';
 const STATIC_ASSETS = [
   '/icons/icon-192-v2.png',
   '/icons/icon-512-v2.png',
