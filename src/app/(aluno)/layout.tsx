@@ -1,7 +1,7 @@
 "use client";
 
 import { useAcademy } from "@/contexts/AcademyThemeContext";
-import { Building2, Home, DollarSign, Palette } from "lucide-react";
+import { Building2, Home, DollarSign, Palette, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
@@ -92,6 +92,13 @@ export default function AlunoLayout({
           >
             <DollarSign className="h-5 w-5" />
             <span className="text-[10px] font-medium">Financeiro</span>
+          </Link>
+          <Link 
+            href="/aluno/tecnicas" 
+            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${pathname === '/aluno/tecnicas' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <BookOpen className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Técnicas</span>
           </Link>
         </nav>
       </div>

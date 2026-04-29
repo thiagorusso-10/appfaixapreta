@@ -4,6 +4,7 @@ import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { useApi } from "@/hooks/useApi";
 import { BeltRank } from "@/lib/types";
 import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -149,10 +150,11 @@ export default function AlunoDashboard() {
   // Histórico de aulas no banco
   const myCheckins = checkins.filter(c => c.studentId === student.id);
   
-  // Técnicas Aprendidas
+  // Técnicas Aprendidas (Mostrar apenas 2 na home)
   const myTechniques = studentTechniques
     .filter(t => t.studentId === student.id)
-    .sort((a, b) => new Date(b.learnedAt).getTime() - new Date(a.learnedAt).getTime());
+    .sort((a, b) => new Date(b.learnedAt).getTime() - new Date(a.learnedAt).getTime())
+    .slice(0, 2);
 
   // Calcula Streak Real baseado nos checkins
   const calculateStreak = () => {
@@ -469,10 +471,15 @@ export default function AlunoDashboard() {
 
       {/* Techniques History */}
       <div>
-         <h3 className="font-bold text-lg text-foreground mb-3 flex items-center gap-2">
-           <PlayCircle className="h-4 w-4 text-primary" />
-           Técnicas Aprendidas
-         </h3>
+         <div className="flex items-center justify-between mb-3">
+           <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+             <PlayCircle className="h-4 w-4 text-primary" />
+             Técnicas Aprendidas
+           </h3>
+           <Link href="/aluno/tecnicas" className="text-xs font-semibold text-primary hover:underline">
+             Ver todas
+           </Link>
+         </div>
          <div className="space-y-2.5">
             {myTechniques.length > 0 ? (
                myTechniques.map((tech) => (
