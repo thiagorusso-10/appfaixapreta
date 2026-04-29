@@ -152,8 +152,7 @@ export default function AlunoDashboard() {
   // Técnicas Aprendidas
   const myTechniques = studentTechniques
     .filter(t => t.studentId === student.id)
-    .sort((a, b) => new Date(b.learnedAt).getTime() - new Date(a.learnedAt).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.learnedAt).getTime() - new Date(a.learnedAt).getTime());
 
   // Calcula Streak Real baseado nos checkins
   const calculateStreak = () => {

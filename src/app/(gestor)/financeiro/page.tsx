@@ -690,7 +690,11 @@ export default function FinanceiroPage() {
             </div>
             <Button className="w-full rounded-xl" onClick={async () => {
                if(!expenseFormData.description || !expenseFormData.amount) return alert('Preencha os dados!');
-               await createExpense(expenseFormData);
+               const res = await createExpense(expenseFormData);
+               if (res?.error) {
+                 alert('Erro ao salvar: ' + JSON.stringify(res.error));
+                 return;
+               }
                setIsExpenseDialogOpen(false);
                setExpenseFormData({ description: '', amount: 0, dueDate: new Date().toISOString().split('T')[0], category: 'FIXA' });
             }}>Salvar Despesa</Button>
