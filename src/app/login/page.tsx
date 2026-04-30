@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { Flame } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 /**
@@ -31,9 +31,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md animate-slide-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/25 mb-4">
-            <Flame className="h-8 w-8" />
-          </div>
+          <img src="/icons/icon-192-v2.png" alt="Faixa Preta" className="h-16 w-16 rounded-2xl object-cover shadow-lg shadow-primary/25 mb-4" />
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Faixa Preta</h1>
           <p className="text-sm text-muted-foreground mt-1">Gestão de Academias de Artes Marciais</p>
         </div>
