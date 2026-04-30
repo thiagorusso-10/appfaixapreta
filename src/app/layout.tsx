@@ -13,7 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Faixa Preta — Gestão de Academias",
   description: "Sistema completo de gestão para academias de artes marciais. Controle alunos, graduações, financeiro e mais.",
-  manifest: "/manifest.json?v=3",
+  manifest: "/manifest.json?v=4",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

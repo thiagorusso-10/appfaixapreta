@@ -539,10 +539,7 @@ export default function AlunosPage() {
                     onClick={() => setSelectedStudent(student)}
                   >
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{student.name}</span>
-                        <span className="text-xs text-muted-foreground">{student.email}</span>
-                      </div>
+                      <span className="font-medium text-foreground">{student.name}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

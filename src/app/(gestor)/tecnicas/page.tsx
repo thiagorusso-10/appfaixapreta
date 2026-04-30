@@ -277,7 +277,6 @@ export default function TecnicasGestorPage() {
                       {group.category}
                     </Badge>
                   )}
-                  <span className="text-xs text-muted-foreground">{new Date(group.learnedAt).toLocaleDateString('pt-BR')}</span>
                 </div>
 
                 {/* Nome do golpe */}

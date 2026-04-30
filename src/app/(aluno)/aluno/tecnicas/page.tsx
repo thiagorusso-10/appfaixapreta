@@ -48,10 +48,7 @@ export default function TecnicasPage() {
                      <img src={tech.imageUrl} alt={tech.name} className="h-12 w-12 rounded-lg object-cover bg-muted shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                     <div className="flex justify-between flex-wrap gap-1 mb-0.5">
-                        <p className="font-bold text-foreground text-sm truncate">{tech.name}</p>
-                        <p className="text-xs text-muted-foreground shrink-0">{new Date(tech.learnedAt).toLocaleDateString('pt-BR')}</p>
-                     </div>
+                     <p className="font-bold text-foreground text-sm truncate mb-0.5">{tech.name}</p>
                      {tech.category && (
                         <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-none">{tech.category}</Badge>
                      )}
@@ -83,12 +80,9 @@ export default function TecnicasPage() {
               )}
               <div className="p-5 space-y-2">
                 <h3 className="text-xl font-bold text-foreground">{selectedTech.name}</h3>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedTech.category && (
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-xs">{selectedTech.category}</Badge>
-                  )}
-                  <span className="text-xs text-muted-foreground">{new Date(selectedTech.learnedAt).toLocaleDateString('pt-BR')}</span>
-                </div>
+                {selectedTech.category && (
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-xs">{selectedTech.category}</Badge>
+                )}
                 {selectedTech.notes && (
                   <p className="text-sm text-muted-foreground pt-2 border-t border-border/50 mt-3">
                     <span className="font-medium text-foreground">Dica do professor:</span> {selectedTech.notes}
