@@ -1,22 +1,50 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSupabase } from '@/lib/supabase/client';
 import { Student, Payment, CheckIn, ClassSession, Plan, BeltRank, PaymentStatus, PaymentMethod, Turma, StudentTechnique, Expense } from '@/lib/types';
 import { useAuth } from '@clerk/nextjs';
+
+// Normaliza o valor da faixa do banco (BRANCA, branca) para o formato do enum (Branca)
+function normalizeBeltRank(raw: string): BeltRank {
+  const map: Record<string, BeltRank> = {};
+  for (const belt of Object.values(BeltRank)) {
+    map[belt.toUpperCase()] = belt;
+    map[belt.toLowerCase()] = belt;
+    map[belt] = belt;
+  }
+  return map[raw] || map[raw?.toUpperCase()] || (raw as BeltRank);
+}
+
+// Cache global por academyId para evitar refetch em troca de aba
+const globalCache: Record<string, {
+  students: Student[];
+  payments: Payment[];
+  checkins: CheckIn[];
+  classes: ClassSession[];
+  plans: Plan[];
+  turmas: Turma[];
+  lessonPlans: any[];
+  studentTechniques: StudentTechnique[];
+  expenses: Expense[];
+  timestamp: number;
+}> = {};
 
 export function useApi(academyId?: string) {
   const supabase = useSupabase();
   const { isLoaded, isSignedIn } = useAuth();
   
-  const [students, setStudents] = useState<Student[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [checkins, setCheckins] = useState<CheckIn[]>([]);
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [turmas, setTurmas] = useState<Turma[]>([]);
-  const [lessonPlans, setLessonPlans] = useState<any[]>([]);
-  const [studentTechniques, setStudentTechniques] = useState<StudentTechnique[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Inicializar state a partir do cache global (stale-while-revalidate)
+  const cached = academyId ? globalCache[academyId] : undefined;
+  const [students, setStudents] = useState<Student[]>(cached?.students || []);
+  const [payments, setPayments] = useState<Payment[]>(cached?.payments || []);
+  const [checkins, setCheckins] = useState<CheckIn[]>(cached?.checkins || []);
+  const [classes, setClasses] = useState<ClassSession[]>(cached?.classes || []);
+  const [plans, setPlans] = useState<Plan[]>(cached?.plans || []);
+  const [turmas, setTurmas] = useState<Turma[]>(cached?.turmas || []);
+  const [lessonPlans, setLessonPlans] = useState<any[]>(cached?.lessonPlans || []);
+  const [studentTechniques, setStudentTechniques] = useState<StudentTechnique[]>(cached?.studentTechniques || []);
+  const [expenses, setExpenses] = useState<Expense[]>(cached?.expenses || []);
+  // Se já temos cache, não mostrar loading (dados aparecem instantaneamente)
+  const [isLoading, setIsLoading] = useState(!cached);
   const fetchData = useCallback(async () => {
     if (!academyId || !isLoaded) {
       if (isLoaded) setIsLoading(false);
@@ -60,7 +88,7 @@ export function useApi(academyId?: string) {
         phone: s.phone,
         birthDate: s.birth_date,
         documentNumber: s.document_number,
-        beltRank: s.belt_rank as BeltRank,
+        beltRank: normalizeBeltRank(s.belt_rank),
         status: s.status as any,
         classesAttendedToNextRank: s.classes_attended || 0,
         classesTargetForNextRank: s.classes_required_for_next_belt || 30,
@@ -180,6 +208,22 @@ export function useApi(academyId?: string) {
         category: e.category,
       }));
       setExpenses(mappedExpenses);
+
+      // Atualiza cache global para reutilização entre abas
+      if (academyId) {
+        globalCache[academyId] = {
+          students: mappedStudents,
+          payments: mappedPayments,
+          checkins: mappedCheckins,
+          classes: mappedClasses,
+          plans: mappedPlans,
+          turmas: mappedTurmas,
+          lessonPlans: mappedLessonPlans,
+          studentTechniques: mappedTechniques,
+          expenses: mappedExpenses,
+          timestamp: Date.now(),
+        };
+      }
     } catch (error) {
       console.error("Erro ao buscar dados do Supabase:", error);
     } finally {

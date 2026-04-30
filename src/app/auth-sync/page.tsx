@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useSupabase } from "@/lib/supabase/client";
-import { Flame, ShieldAlert, Copy, CheckCircle } from "lucide-react";
+import { Flame, ShieldAlert, Copy, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AuthSyncPage() {
@@ -14,6 +14,7 @@ export default function AuthSyncPage() {
   const supabase = useSupabase();
   const [debugInfo, setDebugInfo] = useState<{email: string; clerkId: string; reason: string} | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     if (!userLoaded) return;
@@ -73,22 +74,28 @@ export default function AuthSyncPage() {
             ? `Query students falhou: ${studentError.message}` 
             : 'E-mail não encontrado em nenhuma tabela (users ou students)';
         setDebugInfo({ email, clerkId, reason });
+        setIsChecking(false);
         
       } catch (err) {
         console.error("Erro na sincronização de acesso:", err);
         const email = user?.emailAddresses[0]?.emailAddress || 'desconhecido';
         setDebugInfo({ email, clerkId: user?.id || '', reason: `Exceção: ${err}` });
+        setIsChecking(false);
       }
     };
 
     syncAndRoute();
   }, [user, userLoaded, router, supabase]);
 
-  if (!userLoaded || !user) return (
+  // Tela de loading enquanto verifica acesso (elimina o flash de "Acesso Retido")
+  if (!userLoaded || !user || isChecking) return (
      <div className="min-h-screen flex items-center justify-center bg-background">
-       <div className="animate-pulse flex flex-col items-center">
-         <Flame className="w-12 h-12 text-primary opacity-50 mb-4" />
-         <p className="text-muted-foreground font-medium uppercase tracking-widest text-sm">Autenticando</p>
+       <div className="flex flex-col items-center gap-4">
+         <div className="relative">
+           <Flame className="w-12 h-12 text-primary opacity-50" />
+           <Loader2 className="w-6 h-6 text-primary animate-spin absolute -bottom-1 -right-1" />
+         </div>
+         <p className="text-muted-foreground font-medium uppercase tracking-widest text-sm animate-pulse">Verificando acesso...</p>
        </div>
      </div>
   );

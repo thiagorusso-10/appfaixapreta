@@ -1,14 +1,19 @@
+"use client";
+
 import { Sidebar } from "@/components/Sidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Flame } from "lucide-react";
+import { Menu } from "lucide-react";
 import Link from "next/link";
+import { useAcademy } from "@/contexts/AcademyThemeContext";
 
 export default function GestorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { academy } = useAcademy();
+
   return (
     <div className="flex min-h-screen w-full bg-linear-to-br from-background via-background to-secondary/30 flex-col md:flex-row">
       
@@ -28,10 +33,12 @@ export default function GestorLayout({
         </Sheet>
         
         <Link href="/dashboard" className="ml-4 flex items-center gap-2 group">
-           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-primary to-primary/80 shadow-sm text-primary-foreground group-hover:scale-105 transition-transform">
-              <Flame className="h-4 w-4" />
-           </div>
-           <span className="font-bold tracking-tight text-foreground">App Faixa Preta</span>
+           {academy?.logoUrl ? (
+             <img src={academy.logoUrl} alt={academy.name} className="h-8 w-8 rounded-lg object-cover shadow-sm bg-muted" />
+           ) : (
+             <img src="/icons/icon-192-v2.png" alt="Faixa Preta" className="h-8 w-8 rounded-lg object-cover shadow-sm" />
+           )}
+           <span className="font-bold tracking-tight text-foreground">{academy?.name || "App Faixa Preta"}</span>
         </Link>
       </header>
 

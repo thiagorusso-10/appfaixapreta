@@ -400,7 +400,7 @@ export default function DashboardPage() {
         <Card className="glass-card border-0 flex flex-col min-h-[400px]">
           <CardHeader className="pb-0">
             <CardTitle className="text-xl font-black">Base de Atletas</CardTitle>
-            <CardDescription className="font-medium mt-1">Hierarquia de Pátio Viva</CardDescription>
+            <CardDescription className="font-medium mt-1">Hierarquia de {academy?.name || "sua academia"}</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col min-h-[300px]">
             <div className="flex-1 w-full relative">
@@ -438,7 +438,7 @@ export default function DashboardPage() {
                     <div className="h-3 w-3 rounded-full border border-border shadow-sm shrink-0" style={{ backgroundColor: BELT_COLORS[belt.name] }} />
                     <div className="flex flex-col">
                       <span className="text-xs font-bold leading-tight uppercase text-foreground/80 wrap-break-word">{belt.name}</span>
-                      <span className="text-[10px] font-medium text-muted-foreground leading-none">{belt.value} vidas</span>
+                      <span className="text-[10px] font-medium text-muted-foreground leading-none">{belt.value} {belt.value === 1 ? 'aluno' : 'alunos'}</span>
                     </div>
                  </div>
                ))}
