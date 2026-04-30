@@ -1,12 +1,12 @@
 "use client";
 
 import { useAcademy } from "@/contexts/AcademyThemeContext";
+import { useStudent } from "@/contexts/StudentContext";
 import { useApi } from "@/hooks/useApi";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Receipt, AlertCircle, CheckCircle2, Copy, Download, Share2, WalletCards } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Payment } from "@/lib/types";
@@ -15,19 +15,14 @@ import jsPDF from "jspdf";
 
 export default function FinanceiroAlunoPage() {
   const { academy } = useAcademy();
-  const { user } = useUser();
-  const { students, payments, isLoading } = useApi(academy?.id);
+  const { selectedStudent: student } = useStudent();
+  const { payments, isLoading } = useApi(academy?.id);
 
   const [selectedPixPayment, setSelectedPixPayment] = useState<Payment | null>(null);
   const [selectedReceiptPayment, setSelectedReceiptPayment] = useState<Payment | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
   if (!academy || isLoading) return null;
-  
-  const student = user?.primaryEmailAddress?.emailAddress
-    ? students.find(s => s.email === user.primaryEmailAddress!.emailAddress) || students[0]
-    : students.length > 0 ? students[0] : null;
-
   if (!student) return <div className="p-4">Aluno não encontrado.</div>;
   
   const myPayments = payments.filter(p => p.studentId === student.id);

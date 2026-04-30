@@ -1,8 +1,8 @@
 "use client";
 
 import { useAcademy } from "@/contexts/AcademyThemeContext";
+import { useStudent } from "@/contexts/StudentContext";
 import { useApi } from "@/hooks/useApi";
-import { useUser } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { BookOpen, Swords } from "lucide-react";
@@ -11,13 +11,9 @@ import { StudentTechnique } from "@/lib/types";
 
 export default function TecnicasPage() {
   const { academy } = useAcademy();
-  const { user } = useUser();
-  const { students, studentTechniques, isLoading } = useApi(academy?.id);
+  const { selectedStudent: student } = useStudent();
+  const { studentTechniques, isLoading } = useApi(academy?.id);
   const [selectedTech, setSelectedTech] = useState<StudentTechnique | null>(null);
-
-  const student = user?.primaryEmailAddress?.emailAddress 
-    ? students.find(s => s.email === user.primaryEmailAddress!.emailAddress) || students[0]
-    : students.length > 0 ? students[0] : null;
 
   if (!academy || isLoading) return null;
   if (!student) return <div className="p-4 text-center">Aluno não encontrado no banco de dados.</div>;

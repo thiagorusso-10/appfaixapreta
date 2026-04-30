@@ -1,9 +1,9 @@
 "use client";
 
 import { useAcademy } from "@/contexts/AcademyThemeContext";
+import { useStudent } from "@/contexts/StudentContext";
 import { useApi } from "@/hooks/useApi";
 import { BeltRank } from "@/lib/types";
-import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -23,7 +23,7 @@ import { StudentTechnique } from "@/lib/types";
 
 export default function AlunoDashboard() {
   const { academy, activeTheme } = useAcademy();
-  const { user } = useUser();
+  const { selectedStudent: student } = useStudent();
   const { students, payments, checkins, classes, turmas, plans, studentTechniques, recordCheckIn, isLoading } = useApi(academy?.id);
   const [selectedTech, setSelectedTech] = useState<StudentTechnique | null>(null);
   const [showPixModal, setShowPixModal] = useState(false);
@@ -33,11 +33,6 @@ export default function AlunoDashboard() {
   const [scannerMsg, setScannerMsg] = useState('');
   const scannerRef = useRef<any>(null);
   const scannerContainerId = 'qr-reader-container';
-
-  // Encontra o perfil do aluno no array consumido em tempo real mapeando pelo email
-  const student = user?.primaryEmailAddress?.emailAddress 
-    ? students.find(s => s.email === user.primaryEmailAddress!.emailAddress) || students[0]
-    : students.length > 0 ? students[0] : null;
 
   // Inicializar/destruir o scanner QR
   useEffect(() => {
