@@ -24,14 +24,16 @@ import { StudentTechnique } from "@/lib/types";
 export default function AlunoDashboard() {
   const { academy, activeTheme } = useAcademy();
   const { selectedStudent: student } = useStudent();
-  const { students, payments, checkins, classes, turmas, plans, studentTechniques, recordCheckIn, isLoading } = useApi(academy?.id);
+  const { students, payments, checkins, classes, turmas, plans, studentTechniques, recordCheckIn, uploadAvatar, updateStudent, isLoading } = useApi(academy?.id);
   const [selectedTech, setSelectedTech] = useState<StudentTechnique | null>(null);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [scannerStatus, setScannerStatus] = useState<'scanning' | 'processing' | 'success' | 'already' | 'error'>('scanning');
   const [scannerMsg, setScannerMsg] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const scannerRef = useRef<any>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const scannerContainerId = 'qr-reader-container';
 
   // Inicializar/destruir o scanner QR
@@ -228,13 +230,58 @@ export default function AlunoDashboard() {
          <div className="absolute top-4 right-4 z-10">
             <NotificationBell />
          </div>
-         {student.avatarUrl ? (
-            <img src={student.avatarUrl} alt={student.name} className="h-16 w-16 rounded-2xl border-2 border-primary/30 object-cover shadow-md" />
-         ) : (
-            <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-xl font-bold shadow-md">
-               {student.name.charAt(0)}
-            </div>
-         )}
+         {/* Avatar clicável para trocar foto */}
+         <input
+           type="file"
+           ref={avatarInputRef}
+           accept="image/*"
+           capture="environment"
+           className="hidden"
+           onChange={async (e) => {
+             const file = e.target.files?.[0];
+             if (!file || !student) return;
+             setIsUploadingAvatar(true);
+             try {
+               const url = await uploadAvatar(file);
+               if (url) {
+                 await updateStudent(student.id, { avatarUrl: url });
+               }
+             } catch (err) {
+               console.error('Erro ao enviar foto:', err);
+             } finally {
+               setIsUploadingAvatar(false);
+               e.target.value = '';
+             }
+           }}
+         />
+         <button
+           onClick={() => avatarInputRef.current?.click()}
+           className="relative shrink-0 group"
+           disabled={isUploadingAvatar}
+           title="Trocar foto de perfil"
+         >
+           {student.avatarUrl ? (
+              <img src={student.avatarUrl} alt={student.name} className="h-16 w-16 rounded-2xl border-2 border-primary/30 object-cover shadow-md group-hover:opacity-80 transition-opacity" />
+           ) : (
+              <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-xl font-bold shadow-md group-hover:opacity-80 transition-opacity">
+                 {student.name.charAt(0)}
+              </div>
+           )}
+           {/* Overlay de câmera */}
+           <div className="absolute inset-0 rounded-2xl bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+             {isUploadingAvatar ? (
+               <Loader2 className="h-6 w-6 text-white animate-spin" />
+             ) : (
+               <Camera className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" />
+             )}
+           </div>
+           {/* Badge de câmera sempre visível (mobile) */}
+           {!isUploadingAvatar && (
+             <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-background">
+               <Camera className="h-2.5 w-2.5 text-primary-foreground" />
+             </div>
+           )}
+         </button>
          <div className="flex-1">
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Olá, {student.name.split(' ')[0]}!</h1>
             <p className="text-sm text-muted-foreground">{student.modality} • Faixa {student.beltRank}</p>
