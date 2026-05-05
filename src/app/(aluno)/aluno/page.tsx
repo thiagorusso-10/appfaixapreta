@@ -235,19 +235,42 @@ export default function AlunoDashboard() {
            type="file"
            ref={avatarInputRef}
            accept="image/*"
-           capture="environment"
            className="hidden"
            onChange={async (e) => {
              const file = e.target.files?.[0];
              if (!file || !student) return;
              setIsUploadingAvatar(true);
              try {
-               const url = await uploadAvatar(file);
+               // Comprimir imagem antes do upload (max 800px, qualidade 80%)
+               const compressed = await new Promise<File>((resolve) => {
+                 const img = new Image();
+                 img.onload = () => {
+                   const canvas = document.createElement('canvas');
+                   const MAX = 800;
+                   let w = img.width, h = img.height;
+                   if (w > MAX || h > MAX) {
+                     if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                     else { w = Math.round(w * MAX / h); h = MAX; }
+                   }
+                   canvas.width = w;
+                   canvas.height = h;
+                   canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+                   canvas.toBlob((blob) => {
+                     resolve(new File([blob!], file.name, { type: 'image/jpeg' }));
+                   }, 'image/jpeg', 0.8);
+                 };
+                 img.src = URL.createObjectURL(file);
+               });
+
+               const url = await uploadAvatar(compressed);
                if (url) {
                  await updateStudent(student.id, { avatarUrl: url });
+               } else {
+                 alert('Não foi possível enviar a foto. Verifique sua conexão.');
                }
-             } catch (err) {
+             } catch (err: any) {
                console.error('Erro ao enviar foto:', err);
+               alert('Erro ao salvar foto: ' + (err?.message || 'Tente novamente.'));
              } finally {
                setIsUploadingAvatar(false);
                e.target.value = '';
