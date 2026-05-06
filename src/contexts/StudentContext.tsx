@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { useApi } from "@/hooks/useApi";
@@ -17,6 +17,8 @@ interface StudentContextType {
   selectStudent: (studentId: string) => void;
   /** Reseta a seleção para voltar à tela de escolha */
   switchStudent: () => void;
+  /** Atualiza campos do aluno selecionado localmente (otimista) + refetch em background */
+  patchSelectedStudent: (updates: Partial<Student>) => void;
   /** Dados carregando */
   isLoading: boolean;
 }
@@ -27,6 +29,7 @@ const StudentContext = createContext<StudentContextType>({
   needsSelection: false,
   selectStudent: () => {},
   switchStudent: () => {},
+  patchSelectedStudent: () => {},
   isLoading: true,
 });
 
@@ -39,9 +42,11 @@ const SESSION_KEY = "faixapreta_selected_student";
 export function StudentProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { academy } = useAcademy();
-  const { students, isLoading: apiLoading } = useApi(academy?.id);
+  const { students, isLoading: apiLoading, refetch } = useApi(academy?.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  // Override local para atualização otimista (ex: troca de avatar sem esperar refetch)
+  const [localOverrides, setLocalOverrides] = useState<Partial<Student>>({});
 
   // Encontra todos os alunos vinculados ao email do login
   const siblings = useMemo(() => {
@@ -84,10 +89,19 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedId]);
 
-  const selectedStudent = useMemo(
-    () => siblings.find((s) => s.id === selectedId) || null,
-    [siblings, selectedId]
-  );
+  // Limpa overrides quando os dados reais do banco chegam (após refetch)
+  useEffect(() => {
+    if (Object.keys(localOverrides).length > 0) {
+      setLocalOverrides({});
+    }
+  }, [students]);
+
+  const selectedStudent = useMemo(() => {
+    const base = siblings.find((s) => s.id === selectedId) || null;
+    if (!base || Object.keys(localOverrides).length === 0) return base;
+    // Mescla dados reais com overrides locais
+    return { ...base, ...localOverrides };
+  }, [siblings, selectedId, localOverrides]);
 
   const needsSelection = initialized && siblings.length > 1 && !selectedStudent;
   const isLoading = apiLoading || !initialized;
@@ -103,6 +117,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     } catch (e) {}
   };
 
+  // Atualização otimista: atualiza a UI imediatamente + refetch em background
+  const patchSelectedStudent = useCallback((updates: Partial<Student>) => {
+    setLocalOverrides((prev) => ({ ...prev, ...updates }));
+    // Refetch em background para sincronizar com o banco
+    refetch();
+  }, [refetch]);
+
   return (
     <StudentContext.Provider
       value={{
@@ -111,6 +132,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         needsSelection,
         selectStudent,
         switchStudent,
+        patchSelectedStudent,
         isLoading,
       }}
     >

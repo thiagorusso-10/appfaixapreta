@@ -23,7 +23,7 @@ import { StudentTechnique } from "@/lib/types";
 
 export default function AlunoDashboard() {
   const { academy, activeTheme } = useAcademy();
-  const { selectedStudent: student } = useStudent();
+  const { selectedStudent: student, patchSelectedStudent } = useStudent();
   const { students, payments, checkins, classes, turmas, plans, studentTechniques, recordCheckIn, uploadAvatar, updateStudent, isLoading } = useApi(academy?.id);
   const [selectedTech, setSelectedTech] = useState<StudentTechnique | null>(null);
   const [showPixModal, setShowPixModal] = useState(false);
@@ -265,6 +265,8 @@ export default function AlunoDashboard() {
                const url = await uploadAvatar(compressed);
                if (url) {
                  await updateStudent(student.id, { avatarUrl: url });
+                 // Atualização otimista: mostra a foto imediatamente na UI
+                 patchSelectedStudent({ avatarUrl: url });
                } else {
                  alert('Não foi possível enviar a foto. Verifique sua conexão.');
                }
