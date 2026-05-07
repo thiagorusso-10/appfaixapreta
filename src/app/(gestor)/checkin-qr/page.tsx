@@ -49,7 +49,7 @@ export default function CheckinQrPage() {
   useEffect(() => {
     if (students && students.length > 0) {
        const filteredStudents = students
-         .filter(s => s.status === "ATIVO" || s.status === "INATIVO")
+         .filter(s => s.status === "ATIVO")
          .filter(s => selectedTurma === "all" || s.turmaId === selectedTurma);
        if (filteredStudents.length > 0) {
          setSelectedStudentId(filteredStudents[0].id);
@@ -148,7 +148,7 @@ export default function CheckinQrPage() {
 
   const selectAll = () => {
     const filteredStudents = students
-      .filter(s => s.status === 'ATIVO' || s.status === 'INATIVO')
+      .filter(s => s.status === 'ATIVO')
       .filter(s => selectedTurma === 'all' || s.turmaId === selectedTurma);
     const allIds = filteredStudents.map(s => s.id);
     setSelectedStudentIds(prev => prev.length === allIds.length ? [] : allIds);
@@ -245,7 +245,7 @@ export default function CheckinQrPage() {
                   className="text-xs text-primary font-semibold flex items-center gap-1.5 hover:underline"
                 >
                   <CheckSquare className="h-3.5 w-3.5" />
-                  {selectedStudentIds.length === students.filter(s => (s.status === 'ATIVO' || s.status === 'INATIVO') && (selectedTurma === 'all' || s.turmaId === selectedTurma)).length ? 'Desmarcar todos' : 'Selecionar todos'}
+                  {selectedStudentIds.length === students.filter(s => s.status === 'ATIVO' && (selectedTurma === 'all' || s.turmaId === selectedTurma)).length ? 'Desmarcar todos' : 'Selecionar todos'}
                 </button>
                 {selectedStudentIds.length > 0 && (
                   <span className="text-xs text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">
@@ -257,7 +257,7 @@ export default function CheckinQrPage() {
               {/* Lista de alunos com checkbox */}
               <div className="max-h-[240px] overflow-y-auto space-y-1 rounded-xl border border-border/30 p-2 bg-background/50">
                 {students
-                  .filter(s => s.status === "ATIVO" || s.status === "INATIVO")
+                  .filter(s => s.status === "ATIVO")
                   .filter(s => selectedTurma === "all" || s.turmaId === selectedTurma)
                   .map(s => {
                     const alreadyCheckedIn = feed.some(f => f.studentId === s.id);
