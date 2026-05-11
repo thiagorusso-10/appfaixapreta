@@ -29,36 +29,34 @@ export default function AuthSyncPage() {
         if (!email) throw new Error("Usuário sem e-mail");
         const clerkId = user.id;
 
-        // 1. Procurar se é um GESTOR/PROFESSOR (Tabela users)
-        const { data: adminData, error: adminError } = await supabase
-          .from("users")
-          .select("role, academy_id")
-          .ilike("email", email)
-          .maybeSingle();
+        // Em vez de consultar as tabelas diretamente (o que falha se o RLS bloquear porque 
+        // o clerk_user_id está desatualizado), chamamos a função RPC segura.
+        const { data: syncData, error: syncError } = await supabase.rpc('sync_user_by_email', {
+          p_email: email,
+          p_clerk_user_id: clerkId
+        });
 
-        if (adminError) {
-          console.warn("auth-sync: Erro ao consultar tabela users:", adminError);
+        if (syncError) {
+          console.error("auth-sync: Erro ao chamar RPC sync_user_by_email:", syncError);
         }
 
-        if (adminData && (adminData.role === 'GESTOR' || adminData.role === 'PROFESSOR')) {
-           router.push("/dashboard");
-           return;
+        // 1. É Gestor/Professor?
+        if (syncData?.type === 'GESTOR') {
+          router.push("/dashboard");
+          return;
         }
 
-        // 2. Procurar se é PAI/MÃE/ALUNO (Tabela students)
-        const { data: studentData, error: studentError } = await supabase
-          .from("students")
-          .select("id")
-          .ilike("email", `%${email}%`);
-
-        if (studentError) {
-          console.warn("auth-sync: Erro ao consultar tabela students:", studentError);
+        // 2. É Aluno?
+        if (syncData?.type === 'ALUNO') {
+          router.push("/aluno");
+          return;
         }
 
-        if (studentData && studentData.length > 0) {
-           router.push("/aluno");
-           return;
-        }
+        // Se chegou aqui, não encontrou
+        let adminError = syncError ? syncError : null;
+        let studentError = syncError ? syncError : null;
+        let adminData = null;
+        let studentData = null;
 
         // 3. Fallback localhost (desenvolvimento)
         if (typeof window !== "undefined" && window.location.hostname === "localhost") {
@@ -67,12 +65,19 @@ export default function AuthSyncPage() {
            return;
         }
 
-        // 4. Email desconhecido — salva info de debug para exibir na tela
-        const reason = adminError 
-          ? `Query users falhou: ${adminError.message}` 
-          : studentError 
-            ? `Query students falhou: ${studentError.message}` 
-            : 'E-mail não encontrado em nenhuma tabela (users ou students)';
+        // 4. Email desconhecido — salva info de debug detalhado
+        const details: string[] = [];
+        if (adminError) {
+          details.push(`Query users ERRO: ${adminError.message} (code: ${adminError.code})`);
+        } else {
+          details.push(`Query users: retornou ${adminData ? JSON.stringify(adminData) : 'NULL (nenhum registro)'}`);
+        }
+        if (studentError) {
+          details.push(`Query students ERRO: ${studentError.message} (code: ${studentError.code})`);
+        } else {
+          details.push(`Query students: retornou ${studentData?.length || 0} registro(s)`);
+        }
+        const reason = details.join(' | ');
         setDebugInfo({ email, clerkId, reason });
         setIsChecking(false);
         
