@@ -37,7 +37,7 @@ export default function GestorLayout({
       const { data } = await supabase
         .from("users")
         .select("role")
-        .eq("email", email)
+        .ilike("email", email)
         .maybeSingle();
 
       if (data && (data.role === "GESTOR" || data.role === "PROFESSOR")) {

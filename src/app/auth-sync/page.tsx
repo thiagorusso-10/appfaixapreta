@@ -33,7 +33,7 @@ export default function AuthSyncPage() {
         const { data: adminData, error: adminError } = await supabase
           .from("users")
           .select("role, academy_id")
-          .eq("email", email)
+          .ilike("email", email)
           .maybeSingle();
 
         if (adminError) {

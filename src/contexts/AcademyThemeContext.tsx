@@ -109,7 +109,7 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
         const { data: userData } = await supabase
           .from('users')
           .select('academy_id, role')
-          .eq('email', email)
+          .ilike('email', email)
           .maybeSingle();
 
         if (userData?.academy_id && (userData.role === 'GESTOR' || userData.role === 'PROFESSOR')) {
