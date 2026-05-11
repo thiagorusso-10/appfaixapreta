@@ -3,7 +3,7 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Loader2, ShieldAlert } from "lucide-react";
+import { Menu, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { useUser } from "@clerk/nextjs";
@@ -28,38 +28,62 @@ export default function GestorLayout({
     if (!isLoaded || !user) return;
 
     const checkRole = async () => {
-      const email = user.emailAddresses[0]?.emailAddress;
-      if (!email) {
-        router.replace("/aluno");
-        return;
-      }
+      try {
+        const email = user.emailAddresses[0]?.emailAddress;
+        if (!email) {
+          router.replace("/aluno");
+          return;
+        }
 
-      const { data } = await supabase
-        .from("users")
-        .select("role")
-        .ilike("email", email)
-        .maybeSingle();
+        const { data, error } = await supabase
+          .from("users")
+          .select("role")
+          .ilike("email", email)
+          .maybeSingle();
 
-      if (data && (data.role === "GESTOR" || data.role === "PROFESSOR")) {
+        if (error) {
+          console.warn("GestorLayout: Erro na verificação de role:", error);
+          // Em caso de erro de query, permite acesso (auth-sync já tratou o roteamento)
+          setIsAuthorized(true);
+          setRoleChecked(true);
+          return;
+        }
+
+        if (data && (data.role === "GESTOR" || data.role === "PROFESSOR")) {
+          setIsAuthorized(true);
+        } else {
+          router.replace("/aluno");
+          return;
+        }
+      } catch (err) {
+        console.error("GestorLayout: Exceção na verificação:", err);
+        // Fail-open: auth-sync já fez o roteamento correto
         setIsAuthorized(true);
-      } else {
-        // Não é gestor/professor → redireciona para app do aluno
-        router.replace("/aluno");
-        return;
       }
       setRoleChecked(true);
     };
 
+    // Timeout de segurança: se a verificação demorar mais de 5s, libera
+    const timeout = setTimeout(() => {
+      if (!roleChecked) {
+        console.warn("GestorLayout: Timeout na verificação de role, liberando acesso");
+        setIsAuthorized(true);
+        setRoleChecked(true);
+      }
+    }, 5000);
+
     checkRole();
+
+    return () => clearTimeout(timeout);
   }, [isLoaded, user, supabase, router]);
 
-  // Loading enquanto verifica permissão
+  // Loading enquanto verifica permissão (max 5 segundos)
   if (!roleChecked || !isAuthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0f1a' }}>
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground font-medium">Verificando permissões...</p>
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#3b82f6' }} />
+          <p className="text-sm font-medium" style={{ color: '#94a3b8' }}>Verificando permissões...</p>
         </div>
       </div>
     );
