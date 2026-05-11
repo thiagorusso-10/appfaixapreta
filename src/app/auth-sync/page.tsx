@@ -53,10 +53,7 @@ export default function AuthSyncPage() {
         }
 
         // Se chegou aqui, não encontrou
-        let adminError = syncError ? syncError : null;
-        let studentError = syncError ? syncError : null;
-        let adminData = null;
-        let studentData = null;
+        // Continua com o fallback local ou renderiza o erro
 
         // 3. Fallback localhost (desenvolvimento)
         if (typeof window !== "undefined" && window.location.hostname === "localhost") {
@@ -67,16 +64,13 @@ export default function AuthSyncPage() {
 
         // 4. Email desconhecido — salva info de debug detalhado
         const details: string[] = [];
-        if (adminError) {
-          details.push(`Query users ERRO: ${adminError.message} (code: ${adminError.code})`);
+        if (syncError) {
+          details.push(`RPC ERRO: ${syncError.message} (code: ${syncError.code})`);
         } else {
-          details.push(`Query users: retornou ${adminData ? JSON.stringify(adminData) : 'NULL (nenhum registro)'}`);
+          details.push(`Email não encontrado em nenhuma academia.`);
+          details.push(`Retorno RPC: ${syncData ? JSON.stringify(syncData) : 'NULL'}`);
         }
-        if (studentError) {
-          details.push(`Query students ERRO: ${studentError.message} (code: ${studentError.code})`);
-        } else {
-          details.push(`Query students: retornou ${studentData?.length || 0} registro(s)`);
-        }
+        
         const reason = details.join(' | ');
         setDebugInfo({ email, clerkId, reason });
         setIsChecking(false);
