@@ -102,20 +102,23 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
     try {
       let academyId: string | undefined;
 
-      // Passo 1: Descobre qual academia pertence ao usuário logado (Gestores)
-      const { data: userData } = await supabase
-        .from('users')
-        .select('academy_id')
-        .limit(1)
-        .single();
+      // Passo 1: Descobre qual academia pertence ao usuário logado (Gestores/Professores)
+      const email = user?.emailAddresses?.[0]?.emailAddress;
+      
+      if (email) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('academy_id, role')
+          .eq('email', email)
+          .maybeSingle();
 
-      if (userData?.academy_id) {
-        academyId = userData.academy_id;
-      } else if (user?.emailAddresses?.[0]?.emailAddress) {
+        if (userData?.academy_id && (userData.role === 'GESTOR' || userData.role === 'PROFESSOR')) {
+          academyId = userData.academy_id;
+        }
+      }
+      
+      if (!academyId && email) {
         // Se não achou em users, tenta achar na tabela students (Alunos)
-        const email = user.emailAddresses[0].emailAddress;
-        
-        // Agora que a RLS foi corrigida, o Aluno consegue ler o próprio registro
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('academy_id')

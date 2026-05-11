@@ -3,9 +3,13 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, Loader2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useAcademy } from "@/contexts/AcademyThemeContext";
+import { useUser } from "@clerk/nextjs";
+import { useSupabase } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function GestorLayout({
   children,
@@ -13,6 +17,53 @@ export default function GestorLayout({
   children: React.ReactNode;
 }) {
   const { academy } = useAcademy();
+  const { user, isLoaded } = useUser();
+  const supabase = useSupabase();
+  const router = useRouter();
+  const [roleChecked, setRoleChecked] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Verificação de segurança: só GESTOR ou PROFESSOR podem acessar este layout
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+
+    const checkRole = async () => {
+      const email = user.emailAddresses[0]?.emailAddress;
+      if (!email) {
+        router.replace("/aluno");
+        return;
+      }
+
+      const { data } = await supabase
+        .from("users")
+        .select("role")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (data && (data.role === "GESTOR" || data.role === "PROFESSOR")) {
+        setIsAuthorized(true);
+      } else {
+        // Não é gestor/professor → redireciona para app do aluno
+        router.replace("/aluno");
+        return;
+      }
+      setRoleChecked(true);
+    };
+
+    checkRole();
+  }, [isLoaded, user, supabase, router]);
+
+  // Loading enquanto verifica permissão
+  if (!roleChecked || !isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground font-medium">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-linear-to-br from-background via-background to-secondary/30 flex-col md:flex-row">
