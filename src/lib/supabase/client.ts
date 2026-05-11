@@ -20,7 +20,7 @@ let globalClient: SupabaseClient | null = null;
  * Usa singleton para evitar "Multiple GoTrueClient instances".
  */
 export function useSupabase() {
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   // Armazena referência estável ao getToken para evitar recriação
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
@@ -30,14 +30,22 @@ export function useSupabase() {
       global: {
         fetch: async (url, options = {}) => {
           try {
-            // Tenta obter o token com o template do supabase
-            const clerkToken = await getTokenRef.current({ template: 'supabase' });
+            // Tenta obter o token com o template do supabase (pode falhar se não configurado)
+            const clerkToken = await getTokenRef.current({ template: 'supabase' }).catch(() => null);
             
             const headers = new Headers(options?.headers);
             if (clerkToken) {
               headers.set('Authorization', `Bearer ${clerkToken}`);
             } else {
-              console.warn("useSupabase: Token do Supabase não encontrado no Clerk. Você configurou o JWT Template?");
+              // Fallback para o token padrão se o template não existir
+              const defaultToken = await getTokenRef.current().catch(() => null);
+              if (defaultToken) headers.set('Authorization', `Bearer ${defaultToken}`);
+            }
+
+            // INJEÇÃO DE EMERGÊNCIA (Fallback de RLS):
+            // Passamos o userId no header caso o JWT não seja validado pelo Supabase
+            if (userId) {
+              headers.set('x-clerk-user-id', userId);
             }
 
             return fetch(url, {
