@@ -29,17 +29,25 @@ export function useSupabase() {
     globalClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         fetch: async (url, options = {}) => {
-          const clerkToken = await getTokenRef.current();
+          try {
+            // Tenta obter o token com o template do supabase
+            const clerkToken = await getTokenRef.current({ template: 'supabase' });
+            
+            const headers = new Headers(options?.headers);
+            if (clerkToken) {
+              headers.set('Authorization', `Bearer ${clerkToken}`);
+            } else {
+              console.warn("useSupabase: Token do Supabase não encontrado no Clerk. Você configurou o JWT Template?");
+            }
 
-          const headers = new Headers(options?.headers);
-          if (clerkToken) {
-            headers.set('Authorization', `Bearer ${clerkToken}`);
+            return fetch(url, {
+              ...options,
+              headers,
+            });
+          } catch (e) {
+            console.error("useSupabase: Erro ao obter token do Clerk:", e);
+            return fetch(url, options);
           }
-
-          return fetch(url, {
-            ...options,
-            headers,
-          });
         },
       },
     });
