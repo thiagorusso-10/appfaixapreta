@@ -29,47 +29,68 @@ export default function AuthSyncPage() {
         if (!email) throw new Error("Usuário sem e-mail");
         const clerkId = user.id;
 
-        // Em vez de consultar as tabelas diretamente (o que falha se o RLS bloquear porque 
-        // o clerk_user_id está desatualizado), chamamos a função RPC segura.
-        const { data: syncData, error: syncError } = await supabase.rpc('sync_user_by_email', {
-          p_email: email,
-          p_clerk_user_id: clerkId
-        });
+        let userType: string | null = null;
 
-        if (syncError) {
-          console.error("auth-sync: Erro ao chamar RPC sync_user_by_email:", syncError);
+        // ── TENTATIVA 1: RPC segura (sync_user_by_email) ──
+        try {
+          const { data: syncData, error: syncError } = await supabase.rpc('sync_user_by_email', {
+            p_email: email,
+            p_clerk_user_id: clerkId
+          });
+
+          if (!syncError && syncData?.type) {
+            userType = syncData.type;
+          } else if (syncError) {
+            console.warn("auth-sync: RPC falhou, usando fallback de query direta:", syncError.message);
+          }
+        } catch (rpcErr) {
+          console.warn("auth-sync: RPC indisponível, usando fallback:", rpcErr);
         }
 
-        // 1. É Gestor/Professor?
-        if (syncData?.type === 'GESTOR') {
+        // ── TENTATIVA 2 (Fallback): Query direta nas tabelas ──
+        if (!userType) {
+          // Tenta na tabela de gestores/professores
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .ilike('email', email)
+            .maybeSingle();
+
+          if (userData?.role === 'GESTOR' || userData?.role === 'PROFESSOR') {
+            userType = 'GESTOR';
+          }
+        }
+
+        if (!userType) {
+          // Tenta na tabela de alunos
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('id')
+            .ilike('email', `%${email}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (studentData?.id) {
+            userType = 'ALUNO';
+          }
+        }
+
+        // ── ROTEAMENTO BASEADO NO TIPO ENCONTRADO ──
+        if (userType === 'GESTOR') {
+          sessionStorage.setItem("faixapreta_user_type", "GESTOR");
           router.push("/dashboard");
           return;
         }
 
-        // 2. É Aluno?
-        if (syncData?.type === 'ALUNO') {
+        if (userType === 'ALUNO') {
+          sessionStorage.setItem("faixapreta_user_type", "ALUNO");
           router.push("/aluno");
           return;
         }
 
-        // Se chegou aqui, não encontrou
-        // Continua com o fallback local ou renderiza o erro
-
-        // 3. Fallback localhost (desenvolvimento)
-        if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-           console.warn("DEV BYPASS: Permitindo acesso de gestor por estar em localhost.");
-           router.push("/dashboard");
-           return;
-        }
-
-        // 4. Email desconhecido — salva info de debug detalhado
+        // ── ÚLTIMO RECURSO: Email desconhecido ──
         const details: string[] = [];
-        if (syncError) {
-          details.push(`RPC ERRO: ${syncError.message} (code: ${syncError.code})`);
-        } else {
-          details.push(`Email não encontrado em nenhuma academia.`);
-          details.push(`Retorno RPC: ${syncData ? JSON.stringify(syncData) : 'NULL'}`);
-        }
+        details.push(`Email "${email}" não encontrado em nenhuma tabela (users / students).`);
         
         const reason = details.join(' | ');
         setDebugInfo({ email, clerkId, reason });

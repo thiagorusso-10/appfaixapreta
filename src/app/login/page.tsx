@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      router.replace("/dashboard");
+      router.replace("/auth-sync");
     }
   }, [isLoaded, isSignedIn, router]);
 

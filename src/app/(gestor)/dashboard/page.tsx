@@ -59,7 +59,17 @@ export default function DashboardPage() {
     setMounted(true);
   }, []);
 
-  if (!academy || !mounted || isLoading) return null;
+  if (!academy || !mounted || isLoading) {
+    return (
+      <div className="p-8">
+        <p>Carregando dashboard...</p>
+        <div className="mt-4 p-4 bg-muted rounded-md text-xs font-mono">
+          <p>Debug Academy ID: {academy?.id || 'Nenhum'}</p>
+          <p>Debug Is Loading API: {isLoading ? 'Sim' : 'Não'}</p>
+        </div>
+      </div>
+    );
+  }
 
   // ==== 1. BUSCA DE DADOS VIVOS (BANCO REAL) ====
   const activeStudents = students.filter(s => s.status === "ATIVO");

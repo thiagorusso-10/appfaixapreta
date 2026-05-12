@@ -7,7 +7,6 @@ import { Menu, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { useUser } from "@clerk/nextjs";
-import { useSupabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -18,66 +17,62 @@ export default function GestorLayout({
 }) {
   const { academy } = useAcademy();
   const { user, isLoaded } = useUser();
-  const supabase = useSupabase();
   const router = useRouter();
   const [roleChecked, setRoleChecked] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
-  // Verificação de segurança: só GESTOR ou PROFESSOR podem acessar este layout
+  // Verificação de segurança: usa sessionStorage preenchido pelo auth-sync
+  // Isso elimina a dependência de queries diretas ao Supabase (que falham por RLS)
   useEffect(() => {
     if (!isLoaded || !user) return;
 
-    const checkRole = async () => {
+    const checkRole = () => {
       try {
-        const email = user.emailAddresses[0]?.emailAddress;
-        if (!email) {
-          router.replace("/aluno");
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("users")
-          .select("role")
-          .ilike("email", email)
-          .maybeSingle();
-
-        if (error) {
-          console.warn("GestorLayout: Erro na verificação de role:", error);
-          // Em caso de erro de query, permite acesso (auth-sync já tratou o roteamento)
+        // O auth-sync salva o tipo de usuário no sessionStorage
+        const syncResult = sessionStorage.getItem("faixapreta_user_type");
+        
+        if (syncResult === "GESTOR") {
           setIsAuthorized(true);
           setRoleChecked(true);
           return;
         }
 
-        if (data && (data.role === "GESTOR" || data.role === "PROFESSOR")) {
-          setIsAuthorized(true);
-        } else {
+        if (syncResult === "ALUNO") {
+          // Esse usuário é aluno, manda para o layout correto
           router.replace("/aluno");
+          return;
+        }
+
+        // Se não tem resultado no sessionStorage, o auth-sync não rodou
+        // Redireciona para o auth-sync para classificar o usuário
+        if (!syncResult) {
+          console.warn("GestorLayout: Sem tipo de usuário no sessionStorage. Redirecionando para auth-sync...");
+          router.replace("/auth-sync");
           return;
         }
       } catch (err) {
         console.error("GestorLayout: Exceção na verificação:", err);
-        // Fail-open: auth-sync já fez o roteamento correto
+        // Fail-open: se sessionStorage falhar, permite acesso temporário
         setIsAuthorized(true);
       }
       setRoleChecked(true);
     };
 
-    // Timeout de segurança: se a verificação demorar mais de 5s, libera
+    // Timeout de segurança: se a verificação demorar mais de 3s, libera
     const timeout = setTimeout(() => {
       if (!roleChecked) {
         console.warn("GestorLayout: Timeout na verificação de role, liberando acesso");
         setIsAuthorized(true);
         setRoleChecked(true);
       }
-    }, 5000);
+    }, 3000);
 
     checkRole();
 
     return () => clearTimeout(timeout);
-  }, [isLoaded, user, supabase, router]);
+  }, [isLoaded, user, router]);
 
-  // Loading enquanto verifica permissão (max 5 segundos)
+  // Loading enquanto verifica permissão (max 3 segundos)
   if (!roleChecked || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0f1a' }}>

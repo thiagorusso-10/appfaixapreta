@@ -84,6 +84,8 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 -- 4. Atualiza a Policy de Alunos para permitir que o próprio aluno leia seu registro
 -- mesmo se a política padrão de academia falhar no primeiro milissegundo de login.
 DROP POLICY IF EXISTS "Alunos restritos a academia logada" ON students;
+DROP POLICY IF EXISTS "Alunos restritos a academia logada ou o proprio perfil" ON students;
+
 CREATE POLICY "Alunos restritos a academia logada ou o proprio perfil" 
 ON students FOR ALL USING (
   academy_id = get_my_academy_id() OR clerk_user_id = public.clerk_user_id()

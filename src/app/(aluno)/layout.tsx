@@ -2,9 +2,10 @@
 
 import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { StudentProvider, useStudent } from "@/contexts/StudentContext";
-import { Building2, Home, DollarSign, Palette, BookOpen, ArrowLeftRight } from "lucide-react";
+import { Building2, Home, DollarSign, Palette, BookOpen, ArrowLeftRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { PRESET_THEMES, generateCustomTheme } from "@/lib/themes";
 
@@ -110,9 +111,51 @@ function AlunoLayoutInner({ children }: { children: React.ReactNode }) {
   const { academy, applyTheme, activeTheme } = useAcademy();
   const { selectedStudent, siblings, needsSelection, switchStudent, isLoading } = useStudent();
   const pathname = usePathname();
+  const [loadTimeout, setLoadTimeout] = useState(false);
 
-  // Loading
-  if (isLoading || !academy) return null;
+  // Timeout de segurança: se depois de 8s não carregou, mostra erro
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoading || !academy) {
+        setLoadTimeout(true);
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [isLoading, academy]);
+
+  // Loading com visual (NÃO retorna null - isso causa tela preta)
+  if (isLoading || !academy) {
+    if (loadTimeout) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#0a0f1a' }}>
+          <div className="text-center max-w-sm">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#1e293b' }}>
+              <Building2 className="w-8 h-8" style={{ color: '#f97316' }} />
+            </div>
+            <h2 className="text-lg font-bold mb-2" style={{ color: '#f1f5f9' }}>Erro ao carregar</h2>
+            <p className="text-sm mb-6" style={{ color: '#94a3b8' }}>
+              Não foi possível conectar ao banco de dados da academia. Isso pode acontecer na primeira vez que você loga.
+            </p>
+            <button 
+              onClick={() => window.location.href = '/auth-sync'}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-white text-sm"
+              style={{ background: '#3b82f6' }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0f1a' }}>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#3b82f6' }} />
+          <p className="text-sm font-medium" style={{ color: '#94a3b8' }}>Carregando academia...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Tela de seleção quando há 2+ filhos e nenhum selecionado
   if (needsSelection) return <StudentSelectorScreen />;

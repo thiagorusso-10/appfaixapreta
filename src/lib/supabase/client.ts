@@ -24,6 +24,10 @@ export function useSupabase() {
   // Armazena referência estável ao getToken para evitar recriação
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
+  
+  // Armazena referência do userId para evitar stale closure
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   if (!globalClient) {
     globalClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -44,8 +48,9 @@ export function useSupabase() {
 
             // INJEÇÃO DE EMERGÊNCIA (Fallback de RLS):
             // Passamos o userId no header caso o JWT não seja validado pelo Supabase
-            if (userId) {
-              headers.set('x-clerk-user-id', userId);
+            // Usa userIdRef.current para evitar stale closure do React
+            if (userIdRef.current) {
+              headers.set('x-clerk-user-id', userIdRef.current);
             }
 
             return fetch(url, {
