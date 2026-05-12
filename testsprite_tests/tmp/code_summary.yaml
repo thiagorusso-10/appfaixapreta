@@ -1,0 +1,37 @@
+version: "2"
+type: frontend
+tech_stack:
+  - TypeScript
+  - Next.js (App Router)
+  - Tailwind CSS
+  - Supabase
+  - Clerk Auth
+  - Playwright
+routes:
+  - path: /login
+    file: src/app/login/page.tsx
+    auth_required: false
+    description: Login page
+  - path: /dashboard
+    file: src/app/(gestor)/dashboard/page.tsx
+    auth_required: true
+    description: Gestor Dashboard
+  - path: /auth-sync
+    file: src/app/auth-sync/page.tsx
+    auth_required: true
+    description: Auth synchronization page
+features:
+  - name: Dashboard Access
+    description: Secure dashboard access for gestores
+    files:
+      - src/app/(gestor)/dashboard/page.tsx
+      - src/middleware.ts
+      - src/lib/supabase/client.ts
+    entry_route: /dashboard
+    user_interactions:
+      - View stats
+    api_calls:
+      - method: GET
+        endpoint: /rest/v1/students
+    auth_required: true
+known_limitations: []
