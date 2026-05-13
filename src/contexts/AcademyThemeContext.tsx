@@ -123,15 +123,14 @@ export const AcademyThemeProvider = ({ children }: { children: React.ReactNode }
           .from('students')
           .select('academy_id')
           .ilike('email', `%${email}%`)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
           
         if (studentError) {
           console.warn('AcademyThemeContext: Erro ao buscar aluno:', studentError);
         }
 
-        if (studentData?.academy_id) {
-           academyId = studentData.academy_id;
+        if (studentData && studentData.length > 0) {
+           academyId = studentData[0].academy_id;
         }
       }
 

@@ -53,13 +53,18 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     const email = user?.primaryEmailAddress?.emailAddress;
     if (!email || students.length === 0) return [];
     return students.filter(
-      (s) => s.email?.toLowerCase() === email.toLowerCase()
+      (s) => s.email?.toLowerCase().includes(email.toLowerCase())
     );
   }, [user, students]);
 
   // Inicialização: recupera do sessionStorage ou auto-seleciona se só tem 1
   useEffect(() => {
-    if (apiLoading || siblings.length === 0) return;
+    if (apiLoading) return;
+
+    if (siblings.length === 0) {
+      setInitialized(true);
+      return;
+    }
 
     // Se só tem 1 irmão, seleciona automaticamente
     if (siblings.length === 1) {
