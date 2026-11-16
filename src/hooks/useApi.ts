@@ -14,6 +14,22 @@ function normalizeBeltRank(raw: string): BeltRank {
   return map[raw] || map[raw?.toUpperCase()] || (raw as BeltRank);
 }
 
+const PENDING_BELT_REGEX = /\[GRAD_APROVADA:([^\]]+)\]/i;
+
+function extractPendingBelt(notes?: string | null): { cleanNotes?: string; pendingBelt?: BeltRank } {
+  if (!notes) return { cleanNotes: undefined, pendingBelt: undefined };
+  const match = notes.match(PENDING_BELT_REGEX);
+  const pendingBelt = match?.[1] ? normalizeBeltRank(match[1].trim()) : undefined;
+  const cleanNotes = notes.replace(PENDING_BELT_REGEX, '').trim() || undefined;
+  return { cleanNotes, pendingBelt };
+}
+
+function injectPendingBelt(cleanNotes: string | undefined | null, pendingBelt: BeltRank | null | undefined): string | null {
+  const base = (cleanNotes || '').replace(PENDING_BELT_REGEX, '').trim();
+  if (!pendingBelt) return base || null;
+  return base ? `${base}\n[GRAD_APROVADA:${pendingBelt}]` : `[GRAD_APROVADA:${pendingBelt}]`;
+}
+
 // Cache global por academyId para evitar refetch em troca de aba
 const globalCache: Record<string, {
   students: Student[];
@@ -80,35 +96,39 @@ export function useApi(academyId?: string) {
       const studentsData = studentsResult.data;
 
       // Mapeamento dos campos snake_case do banco para camelCase do TypeScript
-      const mappedStudents: Student[] = (studentsData || []).map((s: any) => ({
-        id: s.id,
-        academyId: s.academy_id,
-        name: s.name,
-        email: s.email,
-        phone: s.phone,
-        birthDate: s.birth_date,
-        documentNumber: s.document_number,
-        beltRank: normalizeBeltRank(s.belt_rank),
-        status: s.status as any,
-        classesAttendedToNextRank: s.classes_attended || 0,
-        classesTargetForNextRank: s.classes_required_for_next_belt || 30,
-        medicalRestrictions: s.medical_notes,
-        professorNotes: s.professor_notes,
-        checkinBlocked: s.checkin_blocked || false,
-        checkinBlockReason: s.checkin_block_reason,
-        role: "ALUNO" as any,
-        modality: s.modality || "Judô",
-        lastGraduationDate: s.created_at,
-        isReadyForExam: s.is_ready_for_exam || false,
-        beltDegree: s.belt_degree || 0,
-        avatarUrl: s.avatar_url,
-        isExemptFromPayment: s.is_exempt || false,
-        turmaId: s.turma_id || undefined,
-        planId: s.plan_id || undefined,
-        weight: s.weight,
-        guardianName: s.guardian_name,
-        guardianPhone: s.guardian_phone,
-      }));
+      const mappedStudents: Student[] = (studentsData || []).map((s: any) => {
+        const { cleanNotes, pendingBelt } = extractPendingBelt(s.professor_notes);
+        return {
+          id: s.id,
+          academyId: s.academy_id,
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          birthDate: s.birth_date,
+          documentNumber: s.document_number,
+          beltRank: normalizeBeltRank(s.belt_rank),
+          status: s.status as any,
+          classesAttendedToNextRank: s.classes_attended || 0,
+          classesTargetForNextRank: s.classes_required_for_next_belt || 30,
+          medicalRestrictions: s.medical_notes,
+          professorNotes: cleanNotes,
+          pendingBeltRank: pendingBelt || null,
+          checkinBlocked: s.checkin_blocked || false,
+          checkinBlockReason: s.checkin_block_reason,
+          role: "ALUNO" as any,
+          modality: s.modality || "Judô",
+          lastGraduationDate: s.created_at,
+          isReadyForExam: s.is_ready_for_exam || false,
+          beltDegree: s.belt_degree || 0,
+          avatarUrl: s.avatar_url,
+          isExemptFromPayment: s.is_exempt || false,
+          turmaId: s.turma_id || undefined,
+          planId: s.plan_id || undefined,
+          weight: s.weight,
+          guardianName: s.guardian_name,
+          guardianPhone: s.guardian_phone,
+        };
+      });
 
       const mappedPayments: Payment[] = (paymentsData || []).map((p: any) => ({
         id: p.id,
@@ -323,7 +343,12 @@ export function useApi(academyId?: string) {
     if (updates.status !== undefined) payload.status = updates.status;
     if (updates.classesAttendedToNextRank !== undefined) payload.classes_attended = updates.classesAttendedToNextRank;
     if (updates.medicalRestrictions !== undefined) payload.medical_notes = updates.medicalRestrictions;
-    if (updates.professorNotes !== undefined) payload.professor_notes = updates.professorNotes;
+    if (updates.professorNotes !== undefined || updates.pendingBeltRank !== undefined) {
+      const currentStudent = students.find(s => s.id === studentId);
+      const notesToUse = updates.professorNotes !== undefined ? updates.professorNotes : currentStudent?.professorNotes;
+      const pendingToUse = updates.pendingBeltRank !== undefined ? updates.pendingBeltRank : currentStudent?.pendingBeltRank;
+      payload.professor_notes = injectPendingBelt(notesToUse, pendingToUse || null);
+    }
     if (updates.isReadyForExam !== undefined) payload.is_ready_for_exam = updates.isReadyForExam;
     if (updates.beltDegree !== undefined) payload.belt_degree = updates.beltDegree;
     if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
@@ -555,6 +580,30 @@ export function useApi(academyId?: string) {
     return { error: error.message };
   };
 
+  const approveStudentExam = async (studentId: string, approvedBelt: BeltRank) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    await supabase.from('students').update({
+      is_ready_for_exam: false,
+      professor_notes: injectPendingBelt(student.professorNotes, approvedBelt),
+    }).eq('id', studentId);
+
+    await fetchData();
+  };
+
+  const revertStudentApproval = async (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    await supabase.from('students').update({
+      is_ready_for_exam: true,
+      professor_notes: injectPendingBelt(student.professorNotes, null),
+    }).eq('id', studentId);
+
+    await fetchData();
+  };
+
   const promoteStudent = async (studentId: string, newBelt: BeltRank) => {
     // Opcionalmente grava no graduation_history
     const student = students.find(s => s.id === studentId);
@@ -570,8 +619,34 @@ export function useApi(academyId?: string) {
        belt_rank: newBelt,
        belt_degree: 0, // Reseta grau — nova faixa começa sem grau
        classes_attended: 0, // Reseta presença
-       is_ready_for_exam: false // Remove da fila de graduação
+       is_ready_for_exam: false, // Remove da fila de graduação
+       professor_notes: injectPendingBelt(student.professorNotes, null),
     }).eq('id', studentId);
+
+    await fetchData();
+  };
+
+  const promoteMultipleStudents = async (promotions: Array<{ studentId: string; newBelt: BeltRank }>) => {
+    if (promotions.length === 0) return;
+
+    for (const { studentId, newBelt } of promotions) {
+      const student = students.find(s => s.id === studentId);
+      if (!student) continue;
+
+      await supabase.from('graduation_history').insert([{
+        student_id: studentId,
+        from_belt: student.beltRank,
+        to_belt: newBelt,
+      }]);
+
+      await supabase.from('students').update({
+        belt_rank: newBelt,
+        belt_degree: 0,
+        classes_attended: 0,
+        is_ready_for_exam: false,
+        professor_notes: injectPendingBelt(student.professorNotes, null),
+      }).eq('id', studentId);
+    }
 
     await fetchData();
   };
@@ -866,7 +941,10 @@ export function useApi(academyId?: string) {
     generateMonthlyInvoices,
     recordCheckIn,
     deleteCheckIn,
+    approveStudentExam,
+    revertStudentApproval,
     promoteStudent,
+    promoteMultipleStudents,
     createClassSession,
     deleteClassSession,
     createPlan,
