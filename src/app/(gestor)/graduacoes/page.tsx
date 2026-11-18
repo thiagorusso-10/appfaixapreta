@@ -57,6 +57,7 @@ export default function GraduacoesPage() {
   const getTargetBelt = (student: Student): BeltRank =>
     selectedTargetBelts[student.id] ??
     student.pendingBeltRank ??
+    student.targetBeltRank ??
     (getNextBelt(student.beltRank) as BeltRank);
 
   // Tela 1: Somente alunos que ainda NÃO fizeram o exame (isReadyForExam === true e sem aprovação pendente)
@@ -336,12 +337,14 @@ export default function GraduacoesPage() {
                                   aria-label={`Selecionar próxima faixa de ${student.name}`}
                                   title="Clique para alterar a faixa de destino"
                                   value={nextBelt}
-                                  onChange={(e) =>
+                                  onChange={async (e) => {
+                                    const newBelt = e.target.value as BeltRank;
                                     setSelectedTargetBelts((prev) => ({
                                       ...prev,
-                                      [student.id]: e.target.value as BeltRank,
-                                    }))
-                                  }
+                                      [student.id]: newBelt,
+                                    }));
+                                    await updateStudent(student.id, { targetBeltRank: newBelt });
+                                  }}
                                   className={`h-[22px] min-w-[145px] appearance-none cursor-pointer rounded-full border pl-2.5 pr-6 uppercase text-[10px] tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors ${
                                     BELT_COLORS[nextBelt.toUpperCase()] || "bg-muted text-muted-foreground"
                                   }`}
@@ -367,8 +370,8 @@ export default function GraduacoesPage() {
 
                         {/* Progresso de Aulas */}
                         <div className="flex-1 w-full md:max-w-xs">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="font-medium text-foreground">
+                          <div className="flex justify-between gap-3 text-sm mb-1">
+                            <span className="font-medium text-foreground whitespace-nowrap">
                               {student.classesAttendedToNextRank} / {student.classesTargetForNextRank} aulas
                             </span>
                             <span className={`font-bold ${isFullyReady ? "text-emerald-500" : "text-blue-500"}`}>

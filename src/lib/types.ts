@@ -75,6 +75,7 @@ export interface Student extends User {
   isExemptFromPayment?: boolean; // Crianças ou bolsistas
   isReadyForExam?: boolean; // Aval do professor (override de meta)
   pendingBeltRank?: BeltRank | null; // Faixa aprovada no exame aguardando entrega/liberação no app
+  targetBeltRank?: BeltRank | null; // Faixa de destino escolhida manualmente na Fila de Exame
   beltDegree?: number; // Grau dentro da faixa (0-4). Ex: Cinza 2º grau = beltRank:CINZA + beltDegree:2
   planId?: string; // ID do Plano Comercial Assinado
   graduationHistory?: Array<{ date: string; fromBelt: string; toBelt: string }>; // Timeline de faixas

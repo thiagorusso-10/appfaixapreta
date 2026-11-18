@@ -28,19 +28,72 @@ function normalizeBeltRank(raw: string): BeltRank {
 }
 
 const PENDING_BELT_REGEX = /\[GRAD_APROVADA:([^\]]+)\]/i;
+const TARGET_BELT_REGEX = /\[FAIXA_EXAME:([^\]]+)\]/i;
+const TARGET_BELT_STORAGE_KEY = "faixapreta_target_belts";
 
-function extractPendingBelt(notes?: string | null): { cleanNotes?: string; pendingBelt?: BeltRank } {
-  if (!notes) return { cleanNotes: undefined, pendingBelt: undefined };
-  const match = notes.match(PENDING_BELT_REGEX);
-  const pendingBelt = match?.[1] ? normalizeBeltRank(match[1].trim()) : undefined;
-  const cleanNotes = notes.replace(PENDING_BELT_REGEX, '').trim() || undefined;
-  return { cleanNotes, pendingBelt };
+function getStoredTargetBelts(): Record<string, BeltRank> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(TARGET_BELT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 }
 
-function injectPendingBelt(cleanNotes: string | undefined | null, pendingBelt: BeltRank | null | undefined): string | null {
-  const base = (cleanNotes || '').replace(PENDING_BELT_REGEX, '').trim();
-  if (!pendingBelt) return base || null;
-  return base ? `${base}\n[GRAD_APROVADA:${pendingBelt}]` : `[GRAD_APROVADA:${pendingBelt}]`;
+function setStoredTargetBelt(studentId: string, belt: BeltRank | null) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getStoredTargetBelts();
+    if (belt) {
+      current[studentId] = belt;
+    } else {
+      delete current[studentId];
+    }
+    window.localStorage.setItem(TARGET_BELT_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function extractPendingBelt(
+  notes?: string | null,
+  studentId?: string
+): { cleanNotes?: string; pendingBelt?: BeltRank; targetBelt?: BeltRank } {
+  const storedTarget = studentId ? getStoredTargetBelts()[studentId] : undefined;
+  if (!notes) {
+    return {
+      cleanNotes: undefined,
+      pendingBelt: undefined,
+      targetBelt: storedTarget ? normalizeBeltRank(storedTarget) : undefined,
+    };
+  }
+  const pendingMatch = notes.match(PENDING_BELT_REGEX);
+  const targetMatch = notes.match(TARGET_BELT_REGEX);
+  const pendingBelt = pendingMatch?.[1] ? normalizeBeltRank(pendingMatch[1].trim()) : undefined;
+  const targetBeltFromNotes = targetMatch?.[1] ? normalizeBeltRank(targetMatch[1].trim()) : undefined;
+  const targetBelt = targetBeltFromNotes || (storedTarget ? normalizeBeltRank(storedTarget) : undefined);
+  const cleanNotes = notes
+    .replace(PENDING_BELT_REGEX, '')
+    .replace(TARGET_BELT_REGEX, '')
+    .trim() || undefined;
+  return { cleanNotes, pendingBelt, targetBelt };
+}
+
+function injectPendingBelt(
+  cleanNotes: string | undefined | null,
+  pendingBelt: BeltRank | null | undefined,
+  targetBelt?: BeltRank | null | undefined
+): string | null {
+  const base = (cleanNotes || '')
+    .replace(PENDING_BELT_REGEX, '')
+    .replace(TARGET_BELT_REGEX, '')
+    .trim();
+  const tags: string[] = [];
+  if (pendingBelt) tags.push(`[GRAD_APROVADA:${pendingBelt}]`);
+  if (targetBelt) tags.push(`[FAIXA_EXAME:${targetBelt}]`);
+  if (tags.length === 0) return base || null;
+  return base ? `${base}\n${tags.join('\n')}` : tags.join('\n');
 }
 
 // Cache global por academyId para evitar refetch em troca de aba
@@ -80,7 +133,9 @@ export function useApi(academyId?: string) {
       return;
     }
 
-    setIsLoading(true);
+    if (!globalCache[academyId]) {
+      setIsLoading(true);
+    }
     try {
       // Como o RLS está ativo, só podemos buscar os dados que o usuário tem acesso.
       // E por garantia, passamos eq('academy_id', academyId).
@@ -110,7 +165,7 @@ export function useApi(academyId?: string) {
 
       // Mapeamento dos campos snake_case do banco para camelCase do TypeScript
       const mappedStudents: Student[] = (studentsData || []).map((s: any) => {
-        const { cleanNotes, pendingBelt } = extractPendingBelt(s.professor_notes);
+        const { cleanNotes, pendingBelt, targetBelt } = extractPendingBelt(s.professor_notes, s.id);
         return {
           id: s.id,
           academyId: s.academy_id,
@@ -126,6 +181,7 @@ export function useApi(academyId?: string) {
           medicalRestrictions: s.medical_notes,
           professorNotes: cleanNotes,
           pendingBeltRank: pendingBelt || null,
+          targetBeltRank: targetBelt || null,
           checkinBlocked: s.checkin_blocked || false,
           checkinBlockReason: s.checkin_block_reason,
           role: "ALUNO" as any,
@@ -356,11 +412,15 @@ export function useApi(academyId?: string) {
     if (updates.status !== undefined) payload.status = updates.status;
     if (updates.classesAttendedToNextRank !== undefined) payload.classes_attended = updates.classesAttendedToNextRank;
     if (updates.medicalRestrictions !== undefined) payload.medical_notes = updates.medicalRestrictions;
-    if (updates.professorNotes !== undefined || updates.pendingBeltRank !== undefined) {
+    if (updates.targetBeltRank !== undefined) {
+      setStoredTargetBelt(studentId, updates.targetBeltRank || null);
+    }
+    if (updates.professorNotes !== undefined || updates.pendingBeltRank !== undefined || updates.targetBeltRank !== undefined) {
       const currentStudent = students.find(s => s.id === studentId);
       const notesToUse = updates.professorNotes !== undefined ? updates.professorNotes : currentStudent?.professorNotes;
       const pendingToUse = updates.pendingBeltRank !== undefined ? updates.pendingBeltRank : currentStudent?.pendingBeltRank;
-      payload.professor_notes = injectPendingBelt(notesToUse, pendingToUse || null);
+      const targetToUse = updates.targetBeltRank !== undefined ? updates.targetBeltRank : currentStudent?.targetBeltRank;
+      payload.professor_notes = injectPendingBelt(notesToUse, pendingToUse || null, targetToUse || null);
     }
     if (updates.isReadyForExam !== undefined) payload.is_ready_for_exam = updates.isReadyForExam;
     if (updates.beltDegree !== undefined) payload.belt_degree = updates.beltDegree;
@@ -376,6 +436,16 @@ export function useApi(academyId?: string) {
     if (updates.weight !== undefined) payload.weight = updates.weight;
     if (updates.guardianName !== undefined) payload.guardian_name = updates.guardianName;
     if (updates.guardianPhone !== undefined) payload.guardian_phone = updates.guardianPhone;
+
+    if (updates.targetBeltRank !== undefined || updates.pendingBeltRank !== undefined) {
+      setStudents(prev => {
+        const next = prev.map(s => (s.id === studentId ? { ...s, ...updates } : s));
+        if (academyId && globalCache[academyId]) {
+          globalCache[academyId].students = next;
+        }
+        return next;
+      });
+    }
 
     const { error } = await supabase.from('students').update(payload).eq('id', studentId);
     if (error) {
@@ -597,9 +667,11 @@ export function useApi(academyId?: string) {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
+    setStoredTargetBelt(studentId, approvedBelt);
+
     await supabase.from('students').update({
       is_ready_for_exam: false,
-      professor_notes: injectPendingBelt(student.professorNotes, approvedBelt),
+      professor_notes: injectPendingBelt(student.professorNotes, approvedBelt, approvedBelt),
     }).eq('id', studentId);
 
     await fetchData();
@@ -609,9 +681,12 @@ export function useApi(academyId?: string) {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
+    const keptTarget = student.pendingBeltRank || student.targetBeltRank || null;
+    setStoredTargetBelt(studentId, keptTarget);
+
     await supabase.from('students').update({
       is_ready_for_exam: true,
-      professor_notes: injectPendingBelt(student.professorNotes, null),
+      professor_notes: injectPendingBelt(student.professorNotes, null, keptTarget),
     }).eq('id', studentId);
 
     await fetchData();
@@ -621,6 +696,8 @@ export function useApi(academyId?: string) {
     // Opcionalmente grava no graduation_history
     const student = students.find(s => s.id === studentId);
     if (!student) return;
+
+    setStoredTargetBelt(studentId, null);
 
     await supabase.from('graduation_history').insert([{
       student_id: studentId,
@@ -633,7 +710,7 @@ export function useApi(academyId?: string) {
        belt_degree: 0, // Reseta grau — nova faixa começa sem grau
        classes_attended: 0, // Reseta presença
        is_ready_for_exam: false, // Remove da fila de graduação
-       professor_notes: injectPendingBelt(student.professorNotes, null),
+       professor_notes: injectPendingBelt(student.professorNotes, null, null),
     }).eq('id', studentId);
 
     await fetchData();
@@ -646,6 +723,8 @@ export function useApi(academyId?: string) {
       const student = students.find(s => s.id === studentId);
       if (!student) continue;
 
+      setStoredTargetBelt(studentId, null);
+
       await supabase.from('graduation_history').insert([{
         student_id: studentId,
         from_belt: student.beltRank,
@@ -657,7 +736,7 @@ export function useApi(academyId?: string) {
         belt_degree: 0,
         classes_attended: 0,
         is_ready_for_exam: false,
-        professor_notes: injectPendingBelt(student.professorNotes, null),
+        professor_notes: injectPendingBelt(student.professorNotes, null, null),
       }).eq('id', studentId);
     }
 
