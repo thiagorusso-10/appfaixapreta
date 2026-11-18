@@ -38,9 +38,17 @@ import { useEffect, useState } from "react";
 
 const BELT_COLORS: Record<string, string> = {
   [BeltRank.BRANCA]: "#e2e8f0",
+  [BeltRank.BRANCA_CINZA]: "#cbd5e1",
+  "BRANCA/CINZA": "#cbd5e1",
   [BeltRank.CINZA]: "#94a3b8",
+  [BeltRank.CINZA_AZUL]: "#60a5fa",
+  "CINZA/AZUL": "#60a5fa",
   [BeltRank.AZUL]: "#3b82f6",
+  [BeltRank.AZUL_AMARELA]: "#fbbf24",
+  "AZUL/AMARELA": "#fbbf24",
   [BeltRank.AMARELA]: "#eab308",
+  [BeltRank.AMARELA_LARANJA]: "#fb923c",
+  "AMARELA/LARANJA": "#fb923c",
   [BeltRank.LARANJA]: "#f97316",
   [BeltRank.VERDE]: "#22c55e",
   [BeltRank.ROXA]: "#a855f7",

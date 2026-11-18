@@ -6,14 +6,30 @@ export enum UserRole {
 
 export enum BeltRank {
   BRANCA = "Branca",
+  BRANCA_CINZA = "Branca/Cinza",
   CINZA = "Cinza",
+  CINZA_AZUL = "Cinza/Azul",
   AZUL = "Azul",
+  AZUL_AMARELA = "Azul/Amarela",
   AMARELA = "Amarela",
+  AMARELA_LARANJA = "Amarela/Laranja",
   LARANJA = "Laranja",
   VERDE = "Verde",
   ROXA = "Roxa",
   MARROM = "Marrom",
   PRETA = "Preta",
+}
+
+export const BELT_LABELS: Record<string, string> = {
+  "BRANCA/CINZA": "Branca/Cinza (Ponta Cinza)",
+  "CINZA/AZUL": "Cinza/Azul (Ponta Azul)",
+  "AZUL/AMARELA": "Azul/Amarela (Ponta Amarela)",
+  "AMARELA/LARANJA": "Amarela/Laranja (Ponta Laranja)",
+};
+
+export function formatBeltRank(belt: string): string {
+  if (!belt) return "";
+  return BELT_LABELS[belt.toUpperCase()] || belt;
 }
 
 export type PaymentStatus = "PAGO" | "ATRASADO" | "PENDENTE";

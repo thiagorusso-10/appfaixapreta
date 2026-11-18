@@ -3,7 +3,7 @@
 import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { useApi } from "@/hooks/useApi";
 import { plansMock } from "@/lib/mockData";
-import { BeltRank, UserRole, type Student } from "@/lib/types";
+import { BeltRank, UserRole, type Student, formatBeltRank } from "@/lib/types";
 import { useState, useRef } from "react";
 import { 
   Table, 
@@ -36,16 +36,34 @@ import { Label } from "@/components/ui/label";
 
 const BELT_COLORS: Record<string, string> = {
   BRANCA: "bg-white text-black border-gray-300",
+  "BRANCA/CINZA": "bg-[linear-gradient(90deg,#ffffff_62%,#9ca3af_62%)] text-black border-gray-400",
   CINZA: "bg-gray-400 text-white border-gray-500",
+  "CINZA/AZUL": "bg-[linear-gradient(90deg,#9ca3af_62%,#3b82f6_62%)] text-white border-blue-500",
   AZUL: "bg-blue-500 text-white border-blue-600",
+  "AZUL/AMARELA": "bg-[linear-gradient(90deg,#3b82f6_62%,#facc15_62%)] text-white border-yellow-500 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]",
   AMARELA: "bg-yellow-400 text-black border-yellow-500",
+  "AMARELA/LARANJA": "bg-[linear-gradient(90deg,#facc15_62%,#f97316_62%)] text-black border-orange-500",
   LARANJA: "bg-orange-500 text-white border-orange-600",
   VERDE: "bg-emerald-500 text-white border-emerald-600",
   ROXA: "bg-purple-600 text-white border-purple-700",
   MARROM: "bg-amber-800 text-white border-amber-900",
   PRETA: "bg-black text-white border-gray-800"
 };
-const BELT_HIERARCHY = ['PRETA', 'MARROM', 'ROXA', 'VERDE', 'LARANJA', 'AMARELA', 'AZUL', 'CINZA', 'BRANCA'];
+const BELT_HIERARCHY = [
+  'PRETA',
+  'MARROM',
+  'ROXA',
+  'VERDE',
+  'LARANJA',
+  'AMARELA/LARANJA',
+  'AMARELA',
+  'AZUL/AMARELA',
+  'AZUL',
+  'CINZA/AZUL',
+  'CINZA',
+  'BRANCA/CINZA',
+  'BRANCA',
+];
 
 export default function AlunosPage() {
   const { academy } = useAcademy();
@@ -329,7 +347,7 @@ export default function AlunosPage() {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {Object.values(BeltRank).map(belt => (
-                      <option key={belt} value={belt}>{belt}</option>
+                      <option key={belt} value={belt}>{formatBeltRank(belt)}</option>
                     ))}
                   </select>
                 </div>
@@ -543,7 +561,7 @@ export default function AlunosPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`w-[110px] justify-between uppercase text-[10px] tracking-wider font-semibold border ${BELT_COLORS[student.beltRank.toUpperCase()] || 'bg-muted text-muted-foreground'} flex items-center`}>
+                        <Badge variant="outline" className={`min-w-[110px] px-2.5 gap-1.5 justify-between uppercase text-[10px] tracking-wider font-semibold border ${BELT_COLORS[student.beltRank.toUpperCase()] || 'bg-muted text-muted-foreground'} flex items-center`}>
                           <span>{student.beltRank}</span>
                           {(student.beltDegree || 0) > 0 && (
                             <span className="flex items-center gap-[2px]">
@@ -605,7 +623,7 @@ export default function AlunosPage() {
                       <span>•</span>
                       <span className="text-primary font-bold">{selectedStudent.modality}</span>
                       <span>•</span>
-                      <Badge variant="outline" className={`w-[110px] justify-between uppercase text-[10px] tracking-wider font-semibold border ${BELT_COLORS[selectedStudent.beltRank.toUpperCase()] || 'bg-muted text-muted-foreground'} flex items-center`}>
+                      <Badge variant="outline" className={`min-w-[110px] px-2.5 gap-1.5 justify-between uppercase text-[10px] tracking-wider font-semibold border ${BELT_COLORS[selectedStudent.beltRank.toUpperCase()] || 'bg-muted text-muted-foreground'} flex items-center`}>
                         <span>{selectedStudent.beltRank}</span>
                         {(selectedStudent.beltDegree || 0) > 0 && (
                           <span className="flex items-center gap-[2px]">

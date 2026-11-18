@@ -3,7 +3,7 @@
 import { useAcademy } from "@/contexts/AcademyThemeContext";
 import { useStudent } from "@/contexts/StudentContext";
 import { useApi } from "@/hooks/useApi";
-import { BeltRank } from "@/lib/types";
+import { BeltRank, formatBeltRank } from "@/lib/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -192,34 +192,55 @@ export default function AlunoDashboard() {
 
   const checkInStreak = calculateStreak();
 
-  const BELT_COLORS: Record<string, string> = {
-    'BRANCA': '#FFFFFF',
-    'CINZA': '#9CA3AF',
-    'AZUL': '#3B82F6',
-    'AMARELA': '#EAB308',
-    'LARANJA': '#F97316',
-    'VERDE': '#22C55E',
-    'ROXA': '#8B5CF6',
-    'MARROM': '#92400E',
-    'PRETA': '#1F2937',
+  const BELT_VISUALS: Record<string, { baseColor: string; tipColor?: string; accentColor: string }> = {
+    'BRANCA': { baseColor: '#FFFFFF', accentColor: '#FFFFFF' },
+    'BRANCA/CINZA': { baseColor: '#FFFFFF', tipColor: '#9CA3AF', accentColor: '#9CA3AF' },
+    'CINZA': { baseColor: '#9CA3AF', accentColor: '#9CA3AF' },
+    'CINZA/AZUL': { baseColor: '#9CA3AF', tipColor: '#3B82F6', accentColor: '#3B82F6' },
+    'AZUL': { baseColor: '#3B82F6', accentColor: '#3B82F6' },
+    'AZUL/AMARELA': { baseColor: '#3B82F6', tipColor: '#EAB308', accentColor: '#EAB308' },
+    'AMARELA': { baseColor: '#EAB308', accentColor: '#EAB308' },
+    'AMARELA/LARANJA': { baseColor: '#EAB308', tipColor: '#F97316', accentColor: '#F97316' },
+    'LARANJA': { baseColor: '#F97316', accentColor: '#F97316' },
+    'VERDE': { baseColor: '#22C55E', accentColor: '#22C55E' },
+    'ROXA': { baseColor: '#8B5CF6', accentColor: '#8B5CF6' },
+    'MARROM': { baseColor: '#92400E', accentColor: '#92400E' },
+    'PRETA': { baseColor: '#1F2937', accentColor: '#1F2937' },
   };
 
   const getVisibleBeltColor = (beltName?: string) => {
     const rank = beltName?.toUpperCase() || 'BRANCA';
-    const color = BELT_COLORS[rank] || '#3B82F6';
+    const color = BELT_VISUALS[rank]?.accentColor || '#3B82F6';
     if (!activeTheme.isDark && rank === 'BRANCA') return '#64748B'; 
     return color;
   };
 
-  const myBeltColor = BELT_COLORS[student.beltRank?.toUpperCase()] || '#3B82F6';
+  const myBeltVisual = BELT_VISUALS[student.beltRank?.toUpperCase() || 'BRANCA'] || { baseColor: '#3B82F6', accentColor: '#3B82F6' };
+  const myBeltBaseColor = myBeltVisual.baseColor;
+  const myBeltTipColor = myBeltVisual.tipColor;
+  const myBeltColor = myBeltVisual.accentColor;
   const myVisibleColor = getVisibleBeltColor(student.beltRank);
 
-  const BELT_ORDER = ['BRANCA', 'CINZA', 'AZUL', 'AMARELA', 'LARANJA', 'VERDE', 'ROXA', 'MARROM', 'PRETA'];
+  const BELT_ORDER = [
+    'BRANCA',
+    'BRANCA/CINZA',
+    'CINZA',
+    'CINZA/AZUL',
+    'AZUL',
+    'AZUL/AMARELA',
+    'AMARELA',
+    'AMARELA/LARANJA',
+    'LARANJA',
+    'VERDE',
+    'ROXA',
+    'MARROM',
+    'PRETA',
+  ];
   const currentBeltIndex = BELT_ORDER.indexOf(student.beltRank?.toUpperCase() || 'BRANCA');
   const nextBeltRank = currentBeltIndex !== -1 && currentBeltIndex < BELT_ORDER.length - 1 
     ? BELT_ORDER[currentBeltIndex + 1] 
     : student.beltRank;
-  const nextBeltColor = BELT_COLORS[nextBeltRank?.toUpperCase() || ''] || '#3B82F6';
+  const nextBeltColor = BELT_VISUALS[nextBeltRank?.toUpperCase() || '']?.accentColor || '#3B82F6';
   const nextVisibleColor = getVisibleBeltColor(nextBeltRank);
 
   return (
@@ -309,7 +330,7 @@ export default function AlunoDashboard() {
          </button>
          <div className="flex-1">
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Olá, {student.name.split(' ')[0]}!</h1>
-            <p className="text-sm text-muted-foreground">{student.modality} • Faixa {student.beltRank}</p>
+            <p className="text-sm text-muted-foreground">{student.modality} • Faixa {formatBeltRank(student.beltRank)}</p>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {myPlan && <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] border-none">{myPlan.name}</Badge>}
               {myTurma && <Badge variant="secondary" className="bg-foreground/5 text-foreground/70 hover:bg-foreground/10 text-[10px] border-none">{myTurma.name}</Badge>}
@@ -449,7 +470,7 @@ export default function AlunoDashboard() {
                   <Target className="h-5 w-5" style={{ color: nextBeltColor }} />
                   Próxima Faixa
                 </CardTitle>
-                <CardDescription className="font-medium mt-1">Rumo à faixa <strong style={{ color: nextBeltColor }}>{nextBeltRank}</strong></CardDescription>
+                <CardDescription className="font-medium mt-1">Rumo à faixa <strong style={{ color: nextBeltColor }}>{formatBeltRank(nextBeltRank)}</strong></CardDescription>
               </div>
               <div 
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full shadow-sm border"
@@ -466,14 +487,22 @@ export default function AlunoDashboard() {
             <div className="mb-6 flex flex-col gap-2">
                <div className="flex justify-between items-end">
                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sua Faixa Atual</span>
-                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: myBeltColor }}>{student.beltRank}</span>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: myVisibleColor }}>{formatBeltRank(student.beltRank)}</span>
                </div>
                
                {/* Faixa Realista (Textura de Tecido e Costuras) */}
                <div 
                  className="relative h-11 w-full rounded-sm shadow-md overflow-hidden flex items-center border-y-2 border-x border-black/20 group" 
-                 style={{ backgroundColor: myBeltColor }}
+                 style={{ backgroundColor: myBeltBaseColor }}
                >
+                  {/* Ponta colorida da faixa (para faixas intermediárias com ponta) */}
+                  {myBeltTipColor && (
+                    <div
+                      className="w-[28%] h-full absolute right-0 top-0 border-l-2 border-black/30"
+                      style={{ backgroundColor: myBeltTipColor }}
+                    />
+                  )}
+
                   {/* Costuras Longitudinais (Stitching) */}
                   <div className="absolute inset-0 flex flex-col justify-evenly py-0.5 opacity-30 mix-blend-multiply pointer-events-none">
                     <div className="w-full h-[1px] border-b-2 border-dashed border-black/40"></div>

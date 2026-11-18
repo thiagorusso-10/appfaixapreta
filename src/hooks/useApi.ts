@@ -5,7 +5,20 @@ import { useAuth } from '@clerk/nextjs';
 
 // Normaliza o valor da faixa do banco (BRANCA, branca) para o formato do enum (Branca)
 function normalizeBeltRank(raw: string): BeltRank {
-  const map: Record<string, BeltRank> = {};
+  const map: Record<string, BeltRank> = {
+    "PONTA CINZA": BeltRank.BRANCA_CINZA,
+    "BRANCA PONTA CINZA": BeltRank.BRANCA_CINZA,
+    "BRANCA/CINZA (PONTA CINZA)": BeltRank.BRANCA_CINZA,
+    "PONTA AZUL": BeltRank.CINZA_AZUL,
+    "CINZA PONTA AZUL": BeltRank.CINZA_AZUL,
+    "CINZA/AZUL (PONTA AZUL)": BeltRank.CINZA_AZUL,
+    "PONTA AMARELA": BeltRank.AZUL_AMARELA,
+    "AZUL PONTA AMARELA": BeltRank.AZUL_AMARELA,
+    "AZUL/AMARELA (PONTA AMARELA)": BeltRank.AZUL_AMARELA,
+    "PONTA LARANJA": BeltRank.AMARELA_LARANJA,
+    "AMARELA PONTA LARANJA": BeltRank.AMARELA_LARANJA,
+    "AMARELA/LARANJA (PONTA LARANJA)": BeltRank.AMARELA_LARANJA,
+  };
   for (const belt of Object.values(BeltRank)) {
     map[belt.toUpperCase()] = belt;
     map[belt.toLowerCase()] = belt;

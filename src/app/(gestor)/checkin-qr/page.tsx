@@ -10,9 +10,13 @@ import { useState, useEffect, useRef } from "react";
 
 const BELT_COLORS: Record<string, string> = {
   BRANCA: "bg-white text-black border-gray-300",
+  "BRANCA/CINZA": "bg-[linear-gradient(90deg,#ffffff_62%,#9ca3af_62%)] text-black border-gray-400",
   CINZA: "bg-gray-400 text-white border-gray-500",
+  "CINZA/AZUL": "bg-[linear-gradient(90deg,#9ca3af_62%,#3b82f6_62%)] text-white border-blue-500",
   AZUL: "bg-blue-500 text-white border-blue-600",
+  "AZUL/AMARELA": "bg-[linear-gradient(90deg,#3b82f6_62%,#facc15_62%)] text-white border-yellow-500 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]",
   AMARELA: "bg-yellow-400 text-black border-yellow-500",
+  "AMARELA/LARANJA": "bg-[linear-gradient(90deg,#facc15_62%,#f97316_62%)] text-black border-orange-500",
   LARANJA: "bg-orange-500 text-white border-orange-600",
   VERDE: "bg-emerald-500 text-white border-emerald-600",
   ROXA: "bg-purple-600 text-white border-purple-700",
@@ -404,7 +408,7 @@ export default function CheckinQrPage() {
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-foreground text-sm">{entry.studentName}</span>
-                          <Badge variant="outline" className={`w-[110px] justify-between text-[9px] uppercase tracking-wider font-semibold border ${BELT_COLORS[entry.beltRank.toUpperCase()] || 'bg-muted'} flex items-center`}>
+                          <Badge variant="outline" className={`min-w-[110px] px-2.5 gap-1.5 justify-between text-[9px] uppercase tracking-wider font-semibold border ${BELT_COLORS[entry.beltRank.toUpperCase()] || 'bg-muted'} flex items-center`}>
                             <span>{entry.beltRank}</span>
                             {(entry.beltDegree || 0) > 0 && (
                               <span className="flex items-center gap-[2px]">

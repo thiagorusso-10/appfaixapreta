@@ -8,15 +8,16 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { PRESET_THEMES, generateCustomTheme } from "@/lib/themes";
+import { formatBeltRank } from "@/lib/types";
 
 // Cores das faixas para o card de seleção
 const BELT_COLORS: Record<string, string> = {
-  'BRANCA': '#e2e8f0', 'CINZA': '#94a3b8', 'AZUL': '#3b82f6',
-  'AMARELA': '#eab308', 'LARANJA': '#f97316', 'VERDE': '#22c55e',
-  'ROXA': '#a855f7', 'MARROM': '#92400e', 'PRETA': '#1e293b',
-  'Branca': '#e2e8f0', 'Cinza': '#94a3b8', 'Azul': '#3b82f6',
-  'Amarela': '#eab308', 'Laranja': '#f97316', 'Verde': '#22c55e',
-  'Roxa': '#a855f7', 'Marrom': '#92400e', 'Preta': '#1e293b',
+  'BRANCA': '#e2e8f0', 'BRANCA/CINZA': '#cbd5e1', 'CINZA': '#94a3b8', 'CINZA/AZUL': '#60a5fa',
+  'AZUL': '#3b82f6', 'AZUL/AMARELA': '#fbbf24', 'AMARELA': '#eab308', 'AMARELA/LARANJA': '#fb923c',
+  'LARANJA': '#f97316', 'VERDE': '#22c55e', 'ROXA': '#a855f7', 'MARROM': '#92400e', 'PRETA': '#1e293b',
+  'Branca': '#e2e8f0', 'Branca/Cinza': '#cbd5e1', 'Cinza': '#94a3b8', 'Cinza/Azul': '#60a5fa',
+  'Azul': '#3b82f6', 'Azul/Amarela': '#fbbf24', 'Amarela': '#eab308', 'Amarela/Laranja': '#fb923c',
+  'Laranja': '#f97316', 'Verde': '#22c55e', 'Roxa': '#a855f7', 'Marrom': '#92400e', 'Preta': '#1e293b',
 };
 
 function StudentSelectorScreen() {
@@ -83,7 +84,7 @@ function StudentSelectorScreen() {
                       style={{ backgroundColor: beltColor }} 
                     />
                     <span className="text-sm text-muted-foreground">
-                      Faixa {child.beltRank}
+                      Faixa {formatBeltRank(child.beltRank)}
                     </span>
                   </div>
                 </div>
